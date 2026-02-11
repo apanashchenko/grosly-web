@@ -120,7 +120,7 @@ export function SortableItem({
       <button
         type="button"
         onClick={onStartEdit ? onStartEdit : onToggle}
-        className="flex flex-1 items-center gap-3 text-left min-w-0"
+        className="flex flex-1 flex-col gap-0.5 text-left min-w-0"
       >
         <span
           className={cn(
@@ -135,95 +135,7 @@ export function SortableItem({
           )}
         </span>
         {item.createdByName && (
-          <span className="text-[11px] text-muted-foreground/60">{item.createdByName}</span>
-        )}
-      </button>
-      {onDeleteItem && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={onDeleteItem}
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-      )}
-    </div>
-  )
-}
-
-export function PlainItem({
-  item,
-  onToggle,
-  editing,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
-  onDeleteItem,
-  unitOptions,
-  categoryOptions,
-  categoryPlaceholder,
-}: {
-  item: ChecklistItem
-  onToggle: () => void
-  editing: boolean
-  onStartEdit?: () => void
-  onSaveEdit?: (data: ItemData) => void
-  onCancelEdit?: () => void
-  onDeleteItem?: () => void
-  unitOptions?: UnitOption[]
-  categoryOptions?: CategoryOption[]
-  categoryPlaceholder?: string
-}) {
-  if (editing) {
-    return (
-      <div className="w-full py-2 rounded-lg px-1 -mx-1 bg-muted/20">
-        <InlineEditForm
-          item={item}
-          sortable={false}
-          onSave={(data) => onSaveEdit?.(data)}
-          onCancel={() => onCancelEdit?.()}
-          onDelete={onDeleteItem}
-          unitOptions={unitOptions}
-          categoryOptions={categoryOptions}
-          categoryPlaceholder={categoryPlaceholder}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className="group flex w-full items-center gap-2 py-3 rounded-lg px-1 -mx-1 hover:bg-muted/30 transition-colors duration-150"
-    >
-      <button type="button" onClick={onToggle} className="shrink-0">
-        <span
-          className={cn(
-            "flex size-5 items-center justify-center rounded border transition-all duration-200",
-            item.checked
-              ? "border-primary bg-primary text-primary-foreground scale-105"
-              : "border-input hover:border-primary/40"
-          )}
-        >
-          {item.checked && <Check className="size-3" />}
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onStartEdit ? onStartEdit : onToggle}
-        className="flex flex-1 items-center gap-3 text-left min-w-0"
-      >
-        <span
-          className={cn(
-            "flex flex-wrap items-baseline gap-2 transition-opacity",
-            item.checked && "opacity-40 line-through"
-          )}
-        >
-          <span className="font-medium">{item.name}</span>
-          {item.badge && <Badge variant="secondary">{item.badge}</Badge>}
-        </span>
-        {item.createdByName && (
-          <span className="text-[11px] text-muted-foreground/60">{item.createdByName}</span>
+          <span className="self-end text-[11px] leading-none text-muted-foreground/60">{item.createdByName}</span>
         )}
       </button>
       {onDeleteItem && (
