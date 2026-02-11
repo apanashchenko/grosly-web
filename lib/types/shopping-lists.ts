@@ -22,6 +22,7 @@ export interface UpdateShoppingListRequest {
   items?: ShoppingListItemRequest[]
   itemPositions?: ItemPosition[]
   groupedByCategories?: boolean
+  version?: number
 }
 
 export interface CategoryInfo {
@@ -52,8 +53,10 @@ export interface UpdateShoppingListItemRequest {
 export interface ShoppingListResponse {
   id: string
   name: string
+  spaceId: string | null
   items: ShoppingListItemResponse[]
   groupedByCategories: boolean
+  version: number
   createdAt: string
   updatedAt: string
 }

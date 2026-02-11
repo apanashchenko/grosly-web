@@ -8,63 +8,79 @@ import type {
 } from "@/lib/types"
 import { request } from "./client"
 
-export function getShoppingLists() {
-  return request<ShoppingListResponse[]>("/shopping-list")
+function spaceHeaders(spaceId?: string): Record<string, string> | undefined {
+  return spaceId ? { "X-Space-Id": spaceId } : undefined
 }
 
-export function getShoppingList(id: string) {
-  return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(id)}`)
+export function getShoppingLists(spaceId?: string) {
+  return request<ShoppingListResponse[]>("/shopping-list", {
+    headers: spaceHeaders(spaceId),
+  })
 }
 
-export function createShoppingList(data: CreateShoppingListRequest) {
+export function getShoppingList(id: string, spaceId?: string) {
+  return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(id)}`, {
+    headers: spaceHeaders(spaceId),
+  })
+}
+
+export function createShoppingList(data: CreateShoppingListRequest, spaceId?: string) {
   return request<ShoppingListResponse>("/shopping-list", {
     method: "POST",
     body: JSON.stringify(data),
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function updateShoppingList(id: string, data: UpdateShoppingListRequest) {
+export function updateShoppingList(id: string, data: UpdateShoppingListRequest, spaceId?: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function deleteShoppingList(id: string) {
+export function deleteShoppingList(id: string, spaceId?: string) {
   return request<void>(`/shopping-list/${encodeURIComponent(id)}`, {
     method: "DELETE",
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function addShoppingListItems(listId: string, items: ShoppingListItemRequest[]) {
+export function addShoppingListItems(listId: string, items: ShoppingListItemRequest[], spaceId?: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(listId)}/items`, {
     method: "POST",
     body: JSON.stringify({ items }),
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function updateShoppingListItem(listId: string, itemId: string, data: UpdateShoppingListItemRequest) {
+export function updateShoppingListItem(listId: string, itemId: string, data: UpdateShoppingListItemRequest, spaceId?: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function deleteShoppingListItem(listId: string, itemId: string) {
+export function deleteShoppingListItem(listId: string, itemId: string, spaceId?: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`, {
     method: "DELETE",
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function smartGroupShoppingList(listId: string) {
+export function smartGroupShoppingList(listId: string, spaceId?: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(listId)}/smart-group`, {
     method: "POST",
+    headers: spaceHeaders(spaceId),
   })
 }
 
-export function combineShoppingLists(data: CombineShoppingListsRequest) {
+export function combineShoppingLists(data: CombineShoppingListsRequest, spaceId?: string) {
   return request<ShoppingListResponse>("/shopping-list/combine", {
     method: "POST",
     body: JSON.stringify(data),
+    headers: spaceHeaders(spaceId),
   })
 }

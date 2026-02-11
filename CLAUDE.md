@@ -13,7 +13,8 @@ Recipe-to-grocery-list app with AI recipe generation and suggestion.
 
 ```
 app/[locale]/           — pages: layout.tsx, page.tsx (home), generate/, suggest/,
-                          shopping-list/ (index + /new), categories/, preferences/, login/
+                          shopping-list/ (index + /new), categories/, preferences/, login/,
+                          spaces/
 app/globals.css         — Tailwind theme, colors, dark mode, custom CSS classes
 
 components/
@@ -23,14 +24,16 @@ components/
   shopping-list/        — shopping-list-card (checklist+DnD), shopping-list-index, shopping-list-new,
                           sortable-item, inline-edit-form, add-item-form, category-group, types.ts
   categories/           — categories-manager
+  spaces/               — spaces-manager, space-card, invitation-card
   preferences/          — user-preferences
   auth/                 — login-form
   ui/                   — shadcn components
 
 lib/
-  api/                  — client.ts (request helper), auth, recipes, shopping-lists, categories,
-                          preferences + index.ts barrel → import from "@/lib/api"
-  types/                — domain types + index.ts barrel → import from "@/lib/types"
+  api/                  — client.ts (request helper), errors.ts (ConflictError), auth, recipes,
+                          shopping-lists, categories, preferences, spaces
+                          + index.ts barrel → import from "@/lib/api"
+  types/                — domain types (incl. spaces.ts) + index.ts barrel → import from "@/lib/types"
   auth/                 — context.tsx (AuthProvider+useAuth), storage.ts, google.ts
                           + index.ts barrel → import from "@/lib/auth"
   constants.ts          — NONE_CATEGORY
@@ -61,10 +64,11 @@ npx tsc --noEmit  # type check
 ## Key Patterns
 
 - **Client components**: all page components are `"use client"` with `useTranslations("Namespace")`
-- **Translation namespaces**: Nav, Auth, Metadata, RecipeParser, RecipeGenerator, RecipeSuggester, ShoppingList, Preferences, Categories
+- **Translation namespaces**: Nav, Auth, Metadata, RecipeParser, RecipeGenerator, RecipeSuggester, ShoppingList, Preferences, Categories, Spaces
 - **Ukrainian plurals**: ICU `{count, plural, one{} few{} many{} other{}}` syntax
 - **Auth**: Google Sign-In → JWT (access+refresh) in localStorage. `useAuth()` from `@/lib/auth`. Auto-refresh on 401
-- **API calls**: through `@/lib/api` barrel. `request()` helper adds auth headers. Error `message` can be string OR array
+- **API calls**: through `@/lib/api` barrel. `request()` helper adds auth headers. Error `message` can be string OR array. Throws `ConflictError` on 409
+- **Space context**: Shopping list API functions accept optional `spaceId` param → sends `X-Space-Id` header. Optimistic locking via `version` field in PATCH body
 - **New pages**: under `app/[locale]/` with `setRequestLocale(locale)` call
 - **New components**: feature folder under `components/` (recipes/, shopping-list/, etc.)
 - **AI endpoints**: pass `language` param via `useLocale()` from next-intl
@@ -103,6 +107,15 @@ Base: `http://localhost:3000`. See `lib/api/` and `lib/types/` for full request/
 | GET | /dietary-restrictions | All dietary restrictions |
 | GET | /users/me/preferences | User preferences |
 | PATCH | /users/me/preferences | Update preferences (arrays are full-replace) |
+| POST | /spaces | Create space |
+| GET | /spaces | List user's spaces |
+| GET | /spaces/:id | Get space details |
+| PATCH | /spaces/:id | Update space |
+| DELETE | /spaces/:id | Delete space (204) |
+| POST | /spaces/:id/invite | Invite member by email (always 200) |
+| GET | /spaces/invitations/my | Pending invitations |
+| POST | /spaces/invitations/:id/respond | Accept/decline invitation |
+| DELETE | /spaces/:id/members/:userId | Remove member (204) |
 
 ## Gotchas
 
@@ -115,3 +128,5 @@ Base: `http://localhost:3000`. See `lib/api/` and `lib/types/` for full request/
 - `request()` handles 204 No Content (returns `undefined`) for DELETE
 - **Tailwind v4**: `@layer utilities {}` does NOT work for custom classes — define outside `@layer`
 - Use shadcn `Select` not native `<select>` (misaligned indicators)
+- Shopping list endpoints support `X-Space-Id` header for space context; PATCH supports `version` for optimistic locking (409 on conflict)
+- **Toast**: `sonner` library — import `{ toast }` from `"sonner"`, `<Toaster />` mounted in root layout

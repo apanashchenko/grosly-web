@@ -1,18 +1,22 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { arrayMove } from "@dnd-kit/sortable"
 import { Loader2, Merge, Plus, RefreshCw, ShoppingCart, X } from "lucide-react"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
-import { Link } from "@/i18n/navigation"
+import { Link, useRouter, usePathname } from "@/i18n/navigation"
 import {
   getShoppingLists,
   getCategories,
+  getSpaces,
   updateShoppingList,
   deleteShoppingList,
   addShoppingListItems,
@@ -20,12 +24,14 @@ import {
   deleteShoppingListItem,
   smartGroupShoppingList,
   combineShoppingLists,
+  ConflictError,
 } from "@/lib/api"
 import {
   UNITS,
   type Category,
   type ShoppingListResponse,
   type ShoppingListItemResponse,
+  type SpaceResponse,
 } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 
@@ -44,8 +50,16 @@ export function ShoppingListIndex() {
   const locale = useLocale()
   const { localizeCategoryName } = useCategoryLocalization()
 
+  const router = useRouter()
+  const pathname = usePathname()
+
   const [lists, setLists] = useState<ShoppingListResponse[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [spaces, setSpaces] = useState<SpaceResponse[]>([])
+  const searchParams = useSearchParams()
+  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(
+    searchParams.get("spaceId")
+  )
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [smartGroupingListId, setSmartGroupingListId] = useState<string | null>(null)
@@ -55,22 +69,26 @@ export function ShoppingListIndex() {
   const [combining, setCombining] = useState(false)
   const [combineError, setCombineError] = useState<string | null>(null)
 
+  const spaceId = activeSpaceId ?? undefined
+
   const fetchLists = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const [listsData, categoriesData] = await Promise.all([
-        getShoppingLists(),
+      const [listsData, categoriesData, spacesData] = await Promise.all([
+        getShoppingLists(spaceId),
         getCategories().catch(() => [] as Category[]),
+        getSpaces().catch(() => [] as SpaceResponse[]),
       ])
       setLists(listsData)
       setCategories(categoriesData)
+      setSpaces(spacesData)
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : t("loadError"))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, spaceId])
 
   useEffect(() => {
     fetchLists()
@@ -87,6 +105,15 @@ export function ShoppingListIndex() {
       ? t(`units.${unit}`)
       : unit
     return label ? `${quantity} ${label}` : `${quantity}`
+  }
+
+  function handleConflict(e: unknown): boolean {
+    if (e instanceof ConflictError) {
+      toast.error(t("conflictError"))
+      fetchLists()
+      return true
+    }
+    return false
   }
 
   // --- Toggle purchased ---
@@ -112,8 +139,10 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await updateShoppingListItem(listId, item.id, { purchased: newPurchased })
-    } catch {
+      const updated = await updateShoppingListItem(listId, item.id, { purchased: newPurchased }, spaceId)
+      setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId
@@ -143,10 +172,13 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await updateShoppingList(listId, {
+      const updated = await updateShoppingList(listId, {
         itemPositions: reordered.map((item, i) => ({ id: item.id, position: i })),
-      })
-    } catch {
+        version: list.version,
+      }, spaceId)
+      setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId ? { ...l, items: list.items } : l
@@ -166,8 +198,10 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await updateShoppingList(listId, { name: newName })
-    } catch {
+      const updated = await updateShoppingList(listId, { name: newName, version: list.version }, spaceId)
+      setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) => (l.id === listId ? { ...l, name: prevName } : l))
       )
@@ -180,7 +214,7 @@ export function ShoppingListIndex() {
     setLists((prev) => prev.filter((l) => l.id !== listId))
 
     try {
-      await deleteShoppingList(listId)
+      await deleteShoppingList(listId, spaceId)
     } catch {
       if (removed) {
         setLists((prev) => [...prev, removed])
@@ -224,13 +258,15 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await updateShoppingListItem(listId, item.id, {
+      const updated = await updateShoppingListItem(listId, item.id, {
         name: data.name,
         quantity: data.quantity,
         unit: data.unit,
         categoryId: data.categoryId,
-      })
-    } catch {
+      }, spaceId)
+      setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId
@@ -264,8 +300,9 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await deleteShoppingListItem(listId, item.id)
-    } catch {
+      await deleteShoppingListItem(listId, item.id, spaceId)
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId ? { ...l, items: prevItems } : l
@@ -287,8 +324,10 @@ export function ShoppingListIndex() {
     )
 
     try {
-      await updateShoppingList(listId, { groupedByCategories: newValue })
-    } catch {
+      const updated = await updateShoppingList(listId, { groupedByCategories: newValue, version: list.version }, spaceId)
+      setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId ? { ...l, groupedByCategories: !newValue } : l
@@ -330,11 +369,12 @@ export function ShoppingListIndex() {
     try {
       const updatedList = await addShoppingListItems(listId, [
         { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, position: newPosition },
-      ])
+      ], spaceId)
       setLists((prev) =>
         prev.map((l) => (l.id === listId ? updatedList : l))
       )
-    } catch {
+    } catch (e) {
+      if (handleConflict(e)) return
       setLists((prev) =>
         prev.map((l) =>
           l.id === listId
@@ -349,12 +389,12 @@ export function ShoppingListIndex() {
   async function handleSmartGroup(listId: string) {
     setSmartGroupingListId(listId)
     try {
-      const updatedList = await smartGroupShoppingList(listId)
+      const updatedList = await smartGroupShoppingList(listId, spaceId)
       setLists((prev) =>
         prev.map((l) => (l.id === listId ? updatedList : l))
       )
-    } catch {
-      // no-op, keep list as-is
+    } catch (e) {
+      handleConflict(e)
     } finally {
       setSmartGroupingListId(null)
     }
@@ -388,7 +428,7 @@ export function ShoppingListIndex() {
       const newList = await combineShoppingLists({
         listIds: Array.from(selectedListIds),
         ...(combineName.trim() && { name: combineName.trim() }),
-      })
+      }, spaceId)
       setLists((prev) => [newList, ...prev])
       exitCombineMode()
     } catch (e) {
@@ -399,9 +439,55 @@ export function ShoppingListIndex() {
     }
   }
 
+  // --- Space tab switch ---
+  function handleSpaceSwitch(newSpaceId: string | null) {
+    if (newSpaceId === activeSpaceId) return
+    setActiveSpaceId(newSpaceId)
+    exitCombineMode()
+    const url = newSpaceId
+      ? `${pathname}?spaceId=${newSpaceId}`
+      : pathname
+    router.replace(url, { scroll: false })
+  }
+
+  const createHref = activeSpaceId
+    ? `/shopping-list/new?spaceId=${activeSpaceId}`
+    : "/shopping-list/new"
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <PageHeader title={t("heading")} subtitle={t("subtitle")} />
+
+      {/* Space context tabs */}
+      {spaces.length > 0 && (
+        <div className="mb-6 flex gap-1 overflow-x-auto rounded-lg border border-border/60 bg-muted/30 p-1">
+          <button
+            onClick={() => handleSpaceSwitch(null)}
+            className={cn(
+              "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              activeSpaceId === null
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t("myLists")}
+          </button>
+          {spaces.map((space) => (
+            <button
+              key={space.id}
+              onClick={() => handleSpaceSwitch(space.id)}
+              className={cn(
+                "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                activeSpaceId === space.id
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {space.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mb-6 flex justify-end gap-2">
         {combineMode ? (
@@ -421,7 +507,7 @@ export function ShoppingListIndex() {
               </Button>
             )}
             <Button asChild className="shadow-md hover:shadow-lg">
-              <Link href="/shopping-list/new">
+              <Link href={createHref}>
                 <Plus />
                 {t("createListButton")}
               </Link>

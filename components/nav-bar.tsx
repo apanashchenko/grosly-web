@@ -13,6 +13,7 @@ import {
   Tag,
   Menu,
   LogOut,
+  Users,
   User as UserIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -61,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "lists",
     items: [
       { href: "/shopping-list", icon: ShoppingCart, key: "shoppingList" },
+      { href: "/spaces", icon: Users, key: "spaces" },
     ],
   },
   {

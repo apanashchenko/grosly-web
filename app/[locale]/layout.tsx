@@ -7,6 +7,7 @@ import { notFound } from "next/navigation"
 import { routing } from "@/i18n/routing"
 import { AuthProvider } from "@/lib/auth"
 import { NavBar } from "@/components/nav-bar"
+import { Toaster } from "@/components/ui/sonner"
 import "../globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -68,6 +69,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <AuthProvider>
             <NavBar />
             {children}
+            <Toaster />
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

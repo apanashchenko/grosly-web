@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Loader2, Plus, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,8 @@ let nextPendingId = 0
 export function ShoppingListNew() {
   const t = useTranslations("ShoppingList")
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const spaceId = searchParams.get("spaceId") ?? undefined
   const { localizeCategoryName } = useCategoryLocalization()
 
   const [categories, setCategories] = useState<Category[]>([])
@@ -119,8 +122,8 @@ export function ShoppingListNew() {
       await createShoppingList({
         name: listName.trim() || undefined,
         items,
-      })
-      router.push("/shopping-list")
+      }, spaceId)
+      router.push(spaceId ? `/shopping-list?spaceId=${spaceId}` : "/shopping-list")
     } catch (e) {
       setError(e instanceof Error ? e.message : t("unexpectedError"))
       setCreating(false)

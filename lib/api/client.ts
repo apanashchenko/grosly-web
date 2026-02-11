@@ -5,6 +5,7 @@ import {
   setTokens,
   clearTokens,
 } from "@/lib/auth/storage"
+import { ConflictError } from "./errors"
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
 
@@ -94,6 +95,9 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
               (retryResponse.status === 400
                 ? "Invalid request. Please check your input."
                 : "Something went wrong. Please try again.")
+        if (retryResponse.status === 409) {
+          throw new ConflictError(message)
+        }
         throw new Error(message)
       }
 
@@ -117,6 +121,9 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
           (response.status === 400
             ? "Invalid request. Please check your input."
             : "Something went wrong. Please try again.")
+    if (response.status === 409) {
+      throw new ConflictError(message)
+    }
     throw new Error(message)
   }
 
