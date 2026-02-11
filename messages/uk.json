@@ -12,7 +12,8 @@
     "settings": "Налаштування",
     "preferences": "Вподобання",
     "categories": "Категорії",
-    "logout": "Вийти"
+    "logout": "Вийти",
+    "savedRecipes": "Збережені рецепти"
   },
   "Auth": {
     "heading": "Ласкаво просимо до Grosly",
@@ -110,7 +111,8 @@
     "saving": "Збереження...",
     "savedSuccess": "Список покупок збережено!",
     "viewShoppingLists": "Перейти до списків покупок",
-    "noRecipes": "Рецепти не згенеровано. Спробуйте інший запит."
+    "noRecipes": "Рецепти не згенеровано. Спробуйте інший запит.",
+    "instructionsLabel": "Приготування"
   },
   "RecipeSuggester": {
     "heading": "Підбір рецептів",
@@ -245,5 +247,41 @@
       "personal-care": "Особиста гігієна",
       "other": "Інше"
     }
+  },
+  "SaveRecipeDialog": {
+    "title": "Зберегти рецепт",
+    "description": "Дайте рецепту назву та за бажанням створіть список покупок.",
+    "titlePlaceholder": "Назва рецепту",
+    "alsoCreateShoppingList": "Також створити список покупок",
+    "shoppingListNamePlaceholder": "Назва списку (необовʼязково)",
+    "saveButton": "Зберегти",
+    "cancelButton": "Скасувати",
+    "saving": "Збереження..."
+  },
+  "SavedRecipes": {
+    "heading": "Збережені рецепти",
+    "subtitle": "Ваші збережені рецепти з парсингу, генерації та підбору.",
+    "detailSubtitle": "Деталі рецепту",
+    "loading": "Завантаження...",
+    "loadError": "Не вдалося завантажити рецепти",
+    "retry": "Спробувати ще",
+    "emptyRecipes": "Збережених рецептів поки немає",
+    "unexpectedError": "Сталася неочікувана помилка.",
+    "source": {
+      "PARSED": "Розібраний",
+      "GENERATED": "Згенерований",
+      "SUGGESTED": "Підібраний"
+    },
+    "createdAt": "Збережено: {date}",
+    "recipeTextTitle": "Рецепт",
+    "viewShoppingList": "Переглянути список покупок",
+    "backToRecipes": "Назад до збережених рецептів",
+    "deleteTitle": "Видалити рецепт?",
+    "deleteDescription": "Рецепт буде видалено назавжди. Цю дію не можна скасувати.",
+    "deleteConfirm": "Видалити",
+    "deleteCancel": "Скасувати",
+    "saveRecipe": "Зберегти рецепт",
+    "recipeSaved": "Рецепт збережено!",
+    "viewSavedRecipes": "Переглянути збережені"
   }
 }

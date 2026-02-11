@@ -12,7 +12,8 @@
     "settings": "Settings",
     "preferences": "Preferences",
     "categories": "Categories",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "savedRecipes": "Saved Recipes"
   },
   "Auth": {
     "heading": "Welcome to Grosly",
@@ -110,7 +111,8 @@
     "saving": "Saving...",
     "savedSuccess": "Shopping list saved!",
     "viewShoppingLists": "View Shopping Lists",
-    "noRecipes": "No recipes generated. Try a different query."
+    "noRecipes": "No recipes generated. Try a different query.",
+    "instructionsLabel": "Instructions"
   },
   "RecipeSuggester": {
     "heading": "Recipe Suggester",
@@ -245,5 +247,41 @@
       "personal-care": "Personal Care",
       "other": "Other"
     }
+  },
+  "SaveRecipeDialog": {
+    "title": "Save Recipe",
+    "description": "Give your recipe a title and optionally create a shopping list.",
+    "titlePlaceholder": "Recipe title",
+    "alsoCreateShoppingList": "Also create a shopping list",
+    "shoppingListNamePlaceholder": "Shopping list name (optional)",
+    "saveButton": "Save",
+    "cancelButton": "Cancel",
+    "saving": "Saving..."
+  },
+  "SavedRecipes": {
+    "heading": "Saved Recipes",
+    "subtitle": "Your saved recipes from parsing, generation, and suggestions.",
+    "detailSubtitle": "Recipe details",
+    "loading": "Loading...",
+    "loadError": "Failed to load recipes",
+    "retry": "Retry",
+    "emptyRecipes": "No saved recipes yet",
+    "unexpectedError": "An unexpected error occurred.",
+    "source": {
+      "PARSED": "Parsed",
+      "GENERATED": "Generated",
+      "SUGGESTED": "Suggested"
+    },
+    "createdAt": "Saved: {date}",
+    "recipeTextTitle": "Recipe",
+    "viewShoppingList": "View Shopping List",
+    "backToRecipes": "Back to saved recipes",
+    "deleteTitle": "Delete Recipe?",
+    "deleteDescription": "This recipe will be permanently deleted. This action cannot be undone.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "saveRecipe": "Save Recipe",
+    "recipeSaved": "Recipe saved!",
+    "viewSavedRecipes": "View saved recipes"
   }
 }

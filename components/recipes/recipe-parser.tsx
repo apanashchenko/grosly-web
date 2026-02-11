@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
-import { ChevronDown, LoaderCircle, ShoppingCart, Check, Trash2 } from "lucide-react"
+import { ChevronDown, LoaderCircle, ShoppingCart, Check, Trash2, Bookmark } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { UNITS, type ParsedIngredient, type Category } from "@/lib/types"
-import { parseRecipe, createShoppingList, getCategories } from "@/lib/api"
+import { parseRecipe, createShoppingList, getCategories, saveRecipe } from "@/lib/api"
 import { NONE_CATEGORY } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { PageHeader } from "@/components/shared/page-header"
 import { Link } from "@/i18n/navigation"
+import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -36,6 +37,7 @@ const MAX_LENGTH = 2000
 
 export function RecipeParser() {
   const t = useTranslations("RecipeParser")
+  const tSave = useTranslations("SavedRecipes")
   const tList = useTranslations("ShoppingList")
   const { localizeCategoryName } = useCategoryLocalization()
   const [recipeText, setRecipeText] = useState("")
@@ -48,6 +50,9 @@ export function RecipeParser() {
   const [listName, setListName] = useState("")
   const [savingList, setSavingList] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [savingRecipe, setSavingRecipe] = useState(false)
+  const [recipeSaved, setRecipeSaved] = useState(false)
 
   const charCount = recipeText.length
   const isOverLimit = charCount > MAX_LENGTH
@@ -64,11 +69,45 @@ export function RecipeParser() {
     getCategories().then(setCategories).catch(() => {})
   }, [])
 
+  async function handleSaveRecipe(opts: {
+    title: string
+    isAddToShoppingList: boolean
+    shoppingListName: string
+  }) {
+    setSavingRecipe(true)
+    try {
+      await saveRecipe({
+        title: opts.title || undefined,
+        source: "PARSED",
+        text: recipeText,
+        isAddToShoppingList: opts.isAddToShoppingList || undefined,
+        ...(opts.isAddToShoppingList
+          ? {
+              items: ingredients.map((ing) => ({
+                name: ing.name,
+                quantity: ing.quantity ?? 0,
+                unit: ing.unit,
+                ...(ing.categoryId ? { categoryId: ing.categoryId } : {}),
+              })),
+              shoppingListName: opts.shoppingListName || undefined,
+            }
+          : {}),
+      })
+      setRecipeSaved(true)
+      setSaveDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } finally {
+      setSavingRecipe(false)
+    }
+  }
+
   async function handleSubmit() {
     setIsLoading(true)
     setError(null)
     setIngredients([])
     setSavedSuccess(false)
+    setRecipeSaved(false)
     setListName("")
 
     try {
@@ -318,6 +357,40 @@ export function RecipeParser() {
                     </Button>
                   </>
                 )}
+
+                <div className="border-t pt-3">
+                  {recipeSaved ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default" className="gap-1">
+                        <Check className="size-3" />
+                        {tSave("recipeSaved")}
+                      </Badge>
+                      <Button variant="link" size="sm" asChild>
+                        <Link href="/recipes">
+                          <Bookmark className="size-4" />
+                          {tSave("viewSavedRecipes")}
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSaveDialogOpen(true)}
+                      className="w-full"
+                    >
+                      <Bookmark className="size-4" />
+                      {tSave("saveRecipe")}
+                    </Button>
+                  )}
+                </div>
+
+                <SaveRecipeDialog
+                  open={saveDialogOpen}
+                  onOpenChange={setSaveDialogOpen}
+                  onSave={handleSaveRecipe}
+                  saving={savingRecipe}
+                  hasItems={ingredients.length > 0}
+                />
               </CardFooter>
             </>
           )}

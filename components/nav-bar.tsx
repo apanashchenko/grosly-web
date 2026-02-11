@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Link, usePathname } from "@/i18n/navigation"
 import {
+  Bookmark,
   ChefHat,
   Sparkles,
   Lightbulb,
@@ -53,6 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/", icon: ChefHat, key: "parseRecipe" },
       { href: "/generate", icon: Sparkles, key: "generateRecipes" },
       { href: "/suggest", icon: Lightbulb, key: "suggestRecipes" },
+      { href: "/recipes", icon: Bookmark, key: "savedRecipes" },
     ],
   },
   {

@@ -10,10 +10,13 @@ import {
   ShoppingCart,
   X,
   Check,
+  Bookmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SuggestRecipesResponse } from "@/lib/types"
-import { suggestRecipes, createShoppingList } from "@/lib/api"
+import { suggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
+import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
+import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
 import { Link } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
@@ -37,6 +40,7 @@ const MAX_INGREDIENTS = 20
 
 export function RecipeSuggester() {
   const t = useTranslations("RecipeSuggester")
+  const tSave = useTranslations("SavedRecipes")
   const locale = useLocale()
 
   const [ingredients, setIngredients] = useState<string[]>([])
@@ -52,6 +56,10 @@ export function RecipeSuggester() {
   const [strictMode, setStrictMode] = useState(false)
   const [savingList, setSavingList] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [savingRecipe, setSavingRecipe] = useState(false)
+  const [recipeToSave, setRecipeToSave] = useState<number | null>(null)
+  const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
 
   function addIngredient() {
     const trimmed = currentIngredient.trim()
@@ -66,6 +74,42 @@ export function RecipeSuggester() {
     setIngredients((prev) => prev.filter((_, i) => i !== index))
   }
 
+  async function handleSaveRecipe(opts: {
+    title: string
+    isAddToShoppingList: boolean
+    shoppingListName: string
+  }) {
+    if (recipeToSave === null || !result) return
+    const recipe = result.suggestedRecipes[recipeToSave]
+    if (!recipe) return
+
+    setSavingRecipe(true)
+    try {
+      await saveRecipe({
+        title: opts.title || undefined,
+        source: "SUGGESTED",
+        text: serializeRecipeText(recipe),
+        isAddToShoppingList: opts.isAddToShoppingList || undefined,
+        ...(opts.isAddToShoppingList
+          ? {
+              items: recipe.ingredients.map((ing) => ({
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit?.canonical ?? "",
+              })),
+              shoppingListName: opts.shoppingListName || undefined,
+            }
+          : {}),
+      })
+      setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
+      setSaveDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } finally {
+      setSavingRecipe(false)
+    }
+  }
+
   async function handleSearch() {
     if (ingredients.length === 0) return
     setIsLoading(true)
@@ -74,6 +118,7 @@ export function RecipeSuggester() {
     setSelectedRecipeIndex(null)
     setCheckedItems(new Set())
     setSavedSuccess(false)
+    setSavedRecipeIndexes(new Set())
 
     try {
       const data = await suggestRecipes(ingredients, locale, strictMode || undefined)
@@ -271,17 +316,38 @@ export function RecipeSuggester() {
                           ))}
                         </div>
                       )}
-                      <Button
-                        variant={isSelected ? "secondary" : "default"}
-                        onClick={() => selectRecipe(index)}
-                      >
-                        {isSelected ? (
-                          <Check className="size-4" />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant={isSelected ? "secondary" : "default"}
+                          onClick={() => selectRecipe(index)}
+                        >
+                          {isSelected ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <ShoppingCart className="size-4" />
+                          )}
+                          {isSelected ? t("selected") : t("selectRecipe")}
+                        </Button>
+                        {savedRecipeIndexes.has(index) ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href="/recipes">
+                              <Check className="size-4" />
+                              {tSave("recipeSaved")}
+                            </Link>
+                          </Button>
                         ) : (
-                          <ShoppingCart className="size-4" />
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setRecipeToSave(index)
+                              setSaveDialogOpen(true)
+                            }}
+                          >
+                            <Bookmark className="size-4" />
+                            {tSave("saveRecipe")}
+                          </Button>
                         )}
-                        {isSelected ? t("selected") : t("selectRecipe")}
-                      </Button>
+                      </div>
                     </div>
                   }
                 />
@@ -351,6 +417,23 @@ export function RecipeSuggester() {
           )}
         </div>
       </div>
+
+      <SaveRecipeDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        onSave={handleSaveRecipe}
+        saving={savingRecipe}
+        defaultTitle={
+          recipeToSave !== null
+            ? result?.suggestedRecipes[recipeToSave]?.dishName
+            : ""
+        }
+        hasItems={
+          recipeToSave !== null
+            ? (result?.suggestedRecipes[recipeToSave]?.ingredients.length ?? 0) > 0
+            : false
+        }
+      />
     </main>
   )
 }

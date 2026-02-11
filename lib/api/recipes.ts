@@ -2,6 +2,10 @@ import type {
   ParseRecipeResponse,
   GenerateRecipesResponse,
   SuggestRecipesResponse,
+  SaveRecipeRequest,
+  SavedRecipeResponse,
+  SavedRecipeListItem,
+  UpdateRecipeTitleRequest,
 } from "@/lib/types"
 import { request } from "./client"
 
@@ -27,5 +31,33 @@ export function suggestRecipes(
   return request<SuggestRecipesResponse>("/recipes/suggest", {
     method: "POST",
     body: JSON.stringify({ ingredients, language, strictMode }),
+  })
+}
+
+export function saveRecipe(data: SaveRecipeRequest) {
+  return request<SavedRecipeResponse>("/recipes", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function getSavedRecipes() {
+  return request<SavedRecipeListItem[]>("/recipes")
+}
+
+export function getSavedRecipe(id: string) {
+  return request<SavedRecipeResponse>(`/recipes/${encodeURIComponent(id)}`)
+}
+
+export function updateRecipeTitle(id: string, data: UpdateRecipeTitleRequest) {
+  return request<SavedRecipeResponse>(`/recipes/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteSavedRecipe(id: string) {
+  return request<void>(`/recipes/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   })
 }

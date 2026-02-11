@@ -10,6 +10,7 @@ import {
   Plus,
   Minus,
   Sparkles,
+  Bookmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type {
@@ -17,7 +18,9 @@ import type {
   GeneratedRecipe,
   RecipeIngredient,
 } from "@/lib/types"
-import { generateRecipes, createShoppingList } from "@/lib/api"
+import { generateRecipes, createShoppingList, saveRecipe } from "@/lib/api"
+import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
+import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
 import { Link } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
@@ -55,6 +58,7 @@ function mergeIngredients(recipes: GeneratedRecipe[]): RecipeIngredient[] {
 
 export function RecipeGenerator() {
   const t = useTranslations("RecipeGenerator")
+  const tSave = useTranslations("SavedRecipes")
   const locale = useLocale()
 
   const [query, setQuery] = useState("")
@@ -66,10 +70,50 @@ export function RecipeGenerator() {
   const [queryOpen, setQueryOpen] = useState(true)
   const [savingList, setSavingList] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [savingRecipe, setSavingRecipe] = useState(false)
+  const [recipeToSave, setRecipeToSave] = useState<number | null>(null)
+  const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
 
   const charCount = query.length
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || isLoading
+
+  async function handleSaveRecipe(opts: {
+    title: string
+    isAddToShoppingList: boolean
+    shoppingListName: string
+  }) {
+    if (recipeToSave === null || !result) return
+    const recipe = result.recipes[recipeToSave]
+    if (!recipe) return
+
+    setSavingRecipe(true)
+    try {
+      await saveRecipe({
+        title: opts.title || undefined,
+        source: "GENERATED",
+        text: serializeRecipeText(recipe),
+        isAddToShoppingList: opts.isAddToShoppingList || undefined,
+        ...(opts.isAddToShoppingList
+          ? {
+              items: recipe.ingredients.map((ing) => ({
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit?.canonical ?? "",
+              })),
+              shoppingListName: opts.shoppingListName || undefined,
+            }
+          : {}),
+      })
+      setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
+      setSaveDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } finally {
+      setSavingRecipe(false)
+    }
+  }
 
   async function handleGenerate() {
     setIsLoading(true)
@@ -78,6 +122,7 @@ export function RecipeGenerator() {
     setSelectedRecipes(new Set())
     setCheckedItems(new Set())
     setSavedSuccess(false)
+    setSavedRecipeIndexes(new Set())
 
     try {
       const data = await generateRecipes(query, locale)
@@ -114,7 +159,7 @@ export function RecipeGenerator() {
         items: shoppingList.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,
-          unit: ing.unit?.localized ?? "",
+          unit: ing.unit?.canonical ?? "",
         })),
       })
       setSavedSuccess(true)
@@ -228,19 +273,42 @@ export function RecipeGenerator() {
                 description={recipe.description}
                 cookingTimeLabel={t("cookingTime", { time: recipe.cookingTime })}
                 ingredients={recipe.ingredients}
+                instructions={recipe.instructions}
+                instructionsLabel={t("instructionsLabel")}
                 defaultOpen={false}
                 footer={
-                  <Button
-                    variant={isSelected ? "secondary" : "default"}
-                    onClick={() => toggleRecipe(index)}
-                  >
-                    {isSelected ? (
-                      <Minus className="size-4" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={isSelected ? "secondary" : "default"}
+                      onClick={() => toggleRecipe(index)}
+                    >
+                      {isSelected ? (
+                        <Minus className="size-4" />
+                      ) : (
+                        <Plus className="size-4" />
+                      )}
+                      {isSelected ? t("removeFromCart") : t("addToCart")}
+                    </Button>
+                    {savedRecipeIndexes.has(index) ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/recipes">
+                          <Check className="size-4" />
+                          {tSave("recipeSaved")}
+                        </Link>
+                      </Button>
                     ) : (
-                      <Plus className="size-4" />
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setRecipeToSave(index)
+                          setSaveDialogOpen(true)
+                        }}
+                      >
+                        <Bookmark className="size-4" />
+                        {tSave("saveRecipe")}
+                      </Button>
                     )}
-                    {isSelected ? t("removeFromCart") : t("addToCart")}
-                  </Button>
+                  </div>
                 }
               />
             )
@@ -310,6 +378,21 @@ export function RecipeGenerator() {
           )}
         </div>
       </div>
+
+      <SaveRecipeDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        onSave={handleSaveRecipe}
+        saving={savingRecipe}
+        defaultTitle={
+          recipeToSave !== null ? result?.recipes[recipeToSave]?.dishName : ""
+        }
+        hasItems={
+          recipeToSave !== null
+            ? (result?.recipes[recipeToSave]?.ingredients.length ?? 0) > 0
+            : false
+        }
+      />
     </main>
   )
 }
