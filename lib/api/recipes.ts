@@ -6,8 +6,11 @@ import type {
   SavedRecipeResponse,
   SavedRecipeListItem,
   UpdateRecipeTitleRequest,
+  PaginatedResponse,
+  PaginationParams,
 } from "@/lib/types"
 import { request } from "./client"
+import { buildPaginationQuery } from "./utils"
 
 export function parseRecipe(recipeText: string) {
   return request<ParseRecipeResponse>("/recipes/parse", {
@@ -41,8 +44,9 @@ export function saveRecipe(data: SaveRecipeRequest) {
   })
 }
 
-export function getSavedRecipes() {
-  return request<SavedRecipeListItem[]>("/recipes")
+export function getSavedRecipes(params?: PaginationParams, signal?: AbortSignal) {
+  const qs = buildPaginationQuery(params)
+  return request<PaginatedResponse<SavedRecipeListItem>>(`/recipes${qs}`, { signal })
 }
 
 export function getSavedRecipe(id: string) {

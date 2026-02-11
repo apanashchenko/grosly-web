@@ -85,6 +85,7 @@
     "combining": "Combining...",
     "myLists": "My Lists",
     "conflictError": "This list was modified by another user. Data refreshed.",
+    "loadingMore": "Loading...",
     "units": {
       "pcs": "pcs",
       "g": "g",
@@ -302,7 +303,8 @@
     "combineError": "Failed to combine",
     "combining": "Combining...",
     "noShoppingList": "No shopping list",
-    "hasShoppingList": "Has shopping list"
+    "hasShoppingList": "Has shopping list",
+    "loadingMore": "Loading..."
   },
   "Spaces": {
     "heading": "Spaces",
@@ -349,6 +351,7 @@
     "deleteSpaceConfirm": "Delete",
     "deleteSpaceCancel": "Cancel",
     "saveButton": "Save",
-    "cancelButton": "Cancel"
+    "cancelButton": "Cancel",
+    "loadingMore": "Loading..."
   }
 }

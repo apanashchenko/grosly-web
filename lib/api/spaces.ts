@@ -5,13 +5,17 @@ import type {
   InviteToSpaceRequest,
   RespondToInvitationRequest,
   InvitationResponse,
+  PaginatedResponse,
+  PaginationParams,
 } from "@/lib/types"
 import { request } from "./client"
+import { buildPaginationQuery } from "./utils"
 
 // --- Spaces CRUD ---
 
-export function getSpaces() {
-  return request<SpaceResponse[]>("/spaces")
+export function getSpaces(params?: PaginationParams, signal?: AbortSignal) {
+  const qs = buildPaginationQuery(params)
+  return request<PaginatedResponse<SpaceResponse>>(`/spaces${qs}`, { signal })
 }
 
 export function getSpace(id: string) {

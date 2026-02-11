@@ -68,7 +68,8 @@ export function CategoriesManager() {
     } finally {
       setLoading(false)
     }
-  }, [t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetchCategories()

@@ -94,7 +94,8 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [recipeId, t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipeId])
 
   useEffect(() => {
     fetchRecipe()
@@ -219,6 +220,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
       purchased: false,
       category: tempCategory ? { id: tempCategory.id, name: tempCategory.name, icon: tempCategory.icon } : null,
       position: newPosition,
+      createdBy: null,
     }
 
     setList((prev) => (prev ? { ...prev, items: [...prev.items, tempItem] } : prev))

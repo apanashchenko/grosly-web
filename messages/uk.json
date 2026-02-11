@@ -85,6 +85,7 @@
     "combining": "Об'єднання...",
     "myLists": "Мої списки",
     "conflictError": "Список було змінено іншим користувачем. Дані оновлено.",
+    "loadingMore": "Завантаження...",
     "units": {
       "pcs": "шт",
       "g": "г",
@@ -302,7 +303,8 @@
     "combineError": "Не вдалося об'єднати",
     "combining": "Об'єднання...",
     "noShoppingList": "Немає списку покупок",
-    "hasShoppingList": "Має список покупок"
+    "hasShoppingList": "Має список покупок",
+    "loadingMore": "Завантаження..."
   },
   "Spaces": {
     "heading": "Простори",
@@ -349,6 +351,7 @@
     "deleteSpaceConfirm": "Видалити",
     "deleteSpaceCancel": "Скасувати",
     "saveButton": "Зберегти",
-    "cancelButton": "Скасувати"
+    "cancelButton": "Скасувати",
+    "loadingMore": "Завантаження..."
   }
 }

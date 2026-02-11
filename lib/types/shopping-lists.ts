@@ -31,6 +31,11 @@ export interface CategoryInfo {
   icon: string | null
 }
 
+export interface CreatedByInfo {
+  id: string
+  name: string
+}
+
 export interface ShoppingListItemResponse {
   id: string
   name: string
@@ -39,6 +44,7 @@ export interface ShoppingListItemResponse {
   purchased: boolean
   category: CategoryInfo | null
   position: number
+  createdBy: CreatedByInfo | null
 }
 
 export interface UpdateShoppingListItemRequest {

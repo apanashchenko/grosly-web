@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   Bookmark,
@@ -44,6 +44,7 @@ import {
   combineShoppingLists,
 } from "@/lib/api"
 import type { SavedRecipeListItem } from "@/lib/types"
+import { usePaginatedList } from "@/hooks/use-paginated-list"
 
 function formatDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -65,9 +66,21 @@ export function SavedRecipesList() {
   const locale = useLocale()
   const router = useRouter()
 
-  const [recipes, setRecipes] = useState<SavedRecipeListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const {
+    items: recipes,
+    setItems: setRecipes,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    reset: resetRecipes,
+    sentinelRef,
+  } = usePaginatedList<SavedRecipeListItem>(
+    (params, signal) => getSavedRecipes(params, signal),
+    [],
+    t("unexpectedError"),
+  )
+
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
 
@@ -79,23 +92,6 @@ export function SavedRecipesList() {
   const [combineError, setCombineError] = useState<string | null>(null)
 
   const recipesWithList = recipes.filter((r) => r.shoppingListId)
-
-  const fetchRecipes = useCallback(async () => {
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const data = await getSavedRecipes()
-      setRecipes(data)
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : t("unexpectedError"))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
-
-  useEffect(() => {
-    fetchRecipes()
-  }, [fetchRecipes])
 
   async function handleUpdateTitle(id: string) {
     const trimmed = editTitle.trim()
@@ -199,7 +195,7 @@ export function SavedRecipesList() {
 
         {loadError && (
           <EmptyState icon={RefreshCw} message={t("loadError")} variant="error">
-            <Button variant="outline" size="sm" onClick={fetchRecipes}>
+            <Button variant="outline" size="sm" onClick={resetRecipes}>
               {t("retry")}
             </Button>
           </EmptyState>
@@ -374,6 +370,14 @@ export function SavedRecipesList() {
             </Link>
           )
         })}
+
+        {/* Infinite scroll sentinel */}
+        {hasMore && <div ref={sentinelRef} />}
+        {loadingMore && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </div>
 
       {combineMode && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { arrayMove } from "@dnd-kit/sortable"
@@ -34,6 +34,7 @@ import {
   type SpaceResponse,
 } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
+import { usePaginatedList } from "@/hooks/use-paginated-list"
 
 
 function formatDate(iso: string, locale: string) {
@@ -53,15 +54,12 @@ export function ShoppingListIndex() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const [lists, setLists] = useState<ShoppingListResponse[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [spaces, setSpaces] = useState<SpaceResponse[]>([])
   const searchParams = useSearchParams()
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(
     searchParams.get("spaceId")
   )
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [smartGroupingListId, setSmartGroupingListId] = useState<string | null>(null)
   const [combineMode, setCombineMode] = useState(false)
   const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set())
@@ -71,28 +69,32 @@ export function ShoppingListIndex() {
 
   const spaceId = activeSpaceId ?? undefined
 
-  const fetchLists = useCallback(async () => {
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const [listsData, categoriesData, spacesData] = await Promise.all([
-        getShoppingLists(spaceId),
-        getCategories().catch(() => [] as Category[]),
-        getSpaces().catch(() => [] as SpaceResponse[]),
-      ])
-      setLists(listsData)
+  const {
+    items: lists,
+    setItems: setLists,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    reset: resetLists,
+    sentinelRef,
+  } = usePaginatedList<ShoppingListResponse>(
+    (params, signal) => getShoppingLists(params, spaceId, signal),
+    [spaceId],
+    t("loadError"),
+  )
+
+  // Fetch categories + spaces (non-paginated / high-limit for tabs)
+  // Fetch categories + spaces (non-paginated / high-limit for tabs)
+  useEffect(() => {
+    Promise.all([
+      getCategories().catch(() => [] as Category[]),
+      getSpaces({ limit: 100 }).then((res) => res.data).catch(() => [] as SpaceResponse[]),
+    ]).then(([categoriesData, spacesData]) => {
       setCategories(categoriesData)
       setSpaces(spacesData)
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : t("loadError"))
-    } finally {
-      setLoading(false)
-    }
-  }, [t, spaceId])
-
-  useEffect(() => {
-    fetchLists()
-  }, [fetchLists])
+    })
+  }, [])
 
   const categoryOptions: CategoryOption[] = categories.map((c) => ({
     value: c.id,
@@ -110,7 +112,7 @@ export function ShoppingListIndex() {
   function handleConflict(e: unknown): boolean {
     if (e instanceof ConflictError) {
       toast.error(t("conflictError"))
-      fetchLists()
+      resetLists()
       return true
     }
     return false
@@ -358,6 +360,7 @@ export function ShoppingListIndex() {
         ? { id: tempCategory.id, name: tempCategory.name, icon: tempCategory.icon }
         : null,
       position: newPosition,
+      createdBy: null,
     }
 
     setLists((prev) =>
@@ -523,7 +526,7 @@ export function ShoppingListIndex() {
 
         {loadError && (
           <EmptyState icon={RefreshCw} message={t("loadError")} variant="error">
-            <Button variant="outline" onClick={fetchLists} className="mt-4">
+            <Button variant="outline" onClick={resetLists} className="mt-4">
               <RefreshCw className="size-4" />
               {t("retry")}
             </Button>
@@ -560,6 +563,7 @@ export function ShoppingListIndex() {
                   rawQuantity: item.quantity,
                   rawUnit: item.unit,
                   rawCategoryId: item.category?.id,
+                  createdByName: activeSpaceId ? item.createdBy?.name : undefined,
                 }
               })}
               createdAt={t("createdAt", { date: formatDate(list.createdAt, locale) })}
@@ -587,6 +591,14 @@ export function ShoppingListIndex() {
             />
           )
         })}
+
+        {/* Infinite scroll sentinel */}
+        {hasMore && <div ref={sentinelRef} />}
+        {loadingMore && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </div>
 
       {combineMode && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Loader2, Plus, RefreshCw, Users } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
@@ -24,15 +24,28 @@ import {
 } from "@/lib/api"
 import type { SpaceResponse, InvitationResponse } from "@/lib/types"
 import { useAuth } from "@/lib/auth"
+import { usePaginatedList } from "@/hooks/use-paginated-list"
 
 export function SpacesManager() {
   const t = useTranslations("Spaces")
   const { user } = useAuth()
 
-  const [spaces, setSpaces] = useState<SpaceResponse[]>([])
+  const {
+    items: spaces,
+    setItems: setSpaces,
+    loading,
+    loadingMore,
+    error: loadError,
+    hasMore,
+    reset: resetSpaces,
+    sentinelRef,
+  } = usePaginatedList<SpaceResponse>(
+    (params, signal) => getSpaces(params, signal),
+    [],
+    t("loadError"),
+  )
+
   const [invitations, setInvitations] = useState<InvitationResponse[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Create form
   const [newName, setNewName] = useState("")
@@ -40,26 +53,14 @@ export function SpacesManager() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const [spacesData, invitationsData] = await Promise.all([
-        getSpaces(),
-        getMyInvitations().catch(() => [] as InvitationResponse[]),
-      ])
-      setSpaces(spacesData)
-      setInvitations(invitationsData.filter((i) => i.status === "PENDING"))
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : t("loadError"))
-    } finally {
-      setLoading(false)
-    }
-  }, [t])
-
+  // Fetch invitations separately (not paginated)
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    getMyInvitations()
+      .catch(() => [] as InvitationResponse[])
+      .then((data) => {
+        setInvitations(data.filter((i) => i.status === "PENDING"))
+      })
+  }, [])
 
   // --- Create space ---
   async function handleCreate() {
@@ -88,8 +89,7 @@ export function SpacesManager() {
     setInvitations((prev) => prev.filter((i) => i.id !== id))
     if (accept) {
       // Refetch spaces to include newly joined space
-      const spacesData = await getSpaces().catch(() => spaces)
-      setSpaces(spacesData)
+      resetSpaces()
     }
   }
 
@@ -118,7 +118,7 @@ export function SpacesManager() {
       <main className="mx-auto max-w-3xl px-4 py-12">
         <PageHeader title={t("heading")} subtitle={t("subtitle")} />
         <EmptyState icon={RefreshCw} message={t("loadError")} variant="error">
-          <Button variant="outline" onClick={fetchData} className="mt-4">
+          <Button variant="outline" onClick={resetSpaces} className="mt-4">
             <RefreshCw className="size-4" />
             {t("retry")}
           </Button>
@@ -204,6 +204,14 @@ export function SpacesManager() {
                 onDeleted={handleSpaceDeleted}
               />
             ))}
+
+            {/* Infinite scroll sentinel */}
+            {hasMore && <div ref={sentinelRef} />}
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
         )}
       </div>

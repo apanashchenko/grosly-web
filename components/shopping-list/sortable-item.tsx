@@ -134,6 +134,9 @@ export function SortableItem({
             <Badge variant="outline">{item.noteBadge}</Badge>
           )}
         </span>
+        {item.createdByName && (
+          <span className="text-[11px] text-muted-foreground/60">{item.createdByName}</span>
+        )}
       </button>
       {onDeleteItem && (
         <Button
@@ -219,6 +222,9 @@ export function PlainItem({
           <span className="font-medium">{item.name}</span>
           {item.badge && <Badge variant="secondary">{item.badge}</Badge>}
         </span>
+        {item.createdByName && (
+          <span className="text-[11px] text-muted-foreground/60">{item.createdByName}</span>
+        )}
       </button>
       {onDeleteItem && (
         <Button

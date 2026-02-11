@@ -123,7 +123,8 @@ export function UserPreferences() {
     } finally {
       setLoading(false)
     }
-  }, [t])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetchData()

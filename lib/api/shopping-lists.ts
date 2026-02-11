@@ -5,16 +5,21 @@ import type {
   ShoppingListItemRequest,
   UpdateShoppingListItemRequest,
   CombineShoppingListsRequest,
+  PaginatedResponse,
+  PaginationParams,
 } from "@/lib/types"
 import { request } from "./client"
+import { buildPaginationQuery } from "./utils"
 
 function spaceHeaders(spaceId?: string): Record<string, string> | undefined {
   return spaceId ? { "X-Space-Id": spaceId } : undefined
 }
 
-export function getShoppingLists(spaceId?: string) {
-  return request<ShoppingListResponse[]>("/shopping-list", {
+export function getShoppingLists(params?: PaginationParams, spaceId?: string, signal?: AbortSignal) {
+  const qs = buildPaginationQuery(params)
+  return request<PaginatedResponse<ShoppingListResponse>>(`/shopping-list${qs}`, {
     headers: spaceHeaders(spaceId),
+    signal,
   })
 }
 

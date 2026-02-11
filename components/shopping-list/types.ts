@@ -7,6 +7,7 @@ export interface ChecklistItem {
   rawQuantity?: number
   rawUnit?: string
   rawCategoryId?: string
+  createdByName?: string
 }
 
 export interface UnitOption {
