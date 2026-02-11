@@ -1,0 +1,61 @@
+export interface IngredientUnit {
+  canonical: string
+  localized: string
+}
+
+export interface ParsedIngredient {
+  name: string
+  quantity: number | null
+  unit: string
+  localizedUnit: string
+  note: string | null
+  categoryId: string | null
+}
+
+export interface ParseRecipeResponse {
+  ingredients: ParsedIngredient[]
+}
+
+export interface RecipeIngredient {
+  name: string
+  quantity: number
+  unit: IngredientUnit
+}
+
+export interface GeneratedRecipe {
+  dishName: string
+  description: string
+  ingredients: RecipeIngredient[]
+  cookingTime: number
+}
+
+export interface ParsedRequest {
+  numberOfPeople: number
+  numberOfDays: number
+  dietaryRestrictions: string[]
+  mealType: string | null
+}
+
+export interface GenerateRecipesResponse {
+  parsedRequest: ParsedRequest
+  recipes: GeneratedRecipe[]
+}
+
+export interface RecipeInstruction {
+  step: number
+  text: string
+}
+
+export interface SuggestedRecipe {
+  dishName: string
+  description: string
+  ingredients: RecipeIngredient[]
+  instructions: RecipeInstruction[]
+  cookingTime: number
+  matchedIngredients: string[]
+  additionalIngredients: string[]
+}
+
+export interface SuggestRecipesResponse {
+  suggestedRecipes: SuggestedRecipe[]
+}
