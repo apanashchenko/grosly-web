@@ -90,6 +90,7 @@ export interface SavedRecipeListItem {
   id: string
   title: string
   source: RecipeSource
+  shoppingListId: string | null
   createdAt: string
 }
 

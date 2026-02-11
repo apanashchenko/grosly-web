@@ -4,6 +4,7 @@ import type {
   UpdateShoppingListRequest,
   ShoppingListItemRequest,
   UpdateShoppingListItemRequest,
+  CombineShoppingListsRequest,
 } from "@/lib/types"
 import { request } from "./client"
 
@@ -58,5 +59,12 @@ export function deleteShoppingListItem(listId: string, itemId: string) {
 export function smartGroupShoppingList(listId: string) {
   return request<ShoppingListResponse>(`/shopping-list/${encodeURIComponent(listId)}/smart-group`, {
     method: "POST",
+  })
+}
+
+export function combineShoppingLists(data: CombineShoppingListsRequest) {
+  return request<ShoppingListResponse>("/shopping-list/combine", {
+    method: "POST",
+    body: JSON.stringify(data),
   })
 }

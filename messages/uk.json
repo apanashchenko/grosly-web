@@ -74,6 +74,14 @@
     "groupByCategory": "Групувати за категоріями",
     "smartGroup": "Авто-категоризація",
     "smartGrouping": "Категоризація...",
+    "combineButton": "Об'єднати",
+    "combineCancel": "Скасувати",
+    "combineSelected": "Об'єднати ({count})",
+    "combineNamePlaceholder": "Назва нового списку (необов'язково)",
+    "combineSuccess": "Списки об'єднано",
+    "combineError": "Не вдалося об'єднати списки",
+    "combineMin": "Оберіть щонайменше 2 списки",
+    "combining": "Об'єднання...",
     "units": {
       "pcs": "шт",
       "g": "г",
@@ -88,14 +96,14 @@
   },
   "RecipeGenerator": {
     "heading": "Генератор рецептів",
-    "subtitle": "Опишіть, що ви хочете приготувати, і AI згенерує рецепти з інгредієнтами.",
+    "subtitle": "Опишіть, що ви хочете приготувати, і ми згенеруємо рецепти з інгредієнтами.",
     "queryTitle": "Опишіть вашу страву",
     "queryDescription": "Розкажіть, що хочете приготувати — кількість людей, днів, дієтичні вподобання",
     "placeholder": "Вегетаріанське меню на 2 особи на 3 дні",
     "generating": "Генерація...",
     "generateButton": "Згенерувати рецепти",
     "unexpectedError": "Сталася неочікувана помилка.",
-    "parsedRequestTitle": "AI зрозумів",
+    "parsedRequestTitle": "Ми зрозуміли",
     "people": "{count, plural, one {# особа} few {# особи} many {# осіб} other {# осіб}}",
     "days": "{count, plural, one {# день} few {# дні} many {# днів} other {# днів}}",
     "mealType": "Тип страви: {type}",
@@ -282,6 +290,15 @@
     "deleteCancel": "Скасувати",
     "saveRecipe": "Зберегти рецепт",
     "recipeSaved": "Рецепт збережено!",
-    "viewSavedRecipes": "Переглянути збережені"
+    "viewSavedRecipes": "Переглянути збережені",
+    "combineButton": "Об'єднати списки покупок",
+    "combineCancel": "Скасувати",
+    "combineSelected": "Об'єднати ({count})",
+    "combineNamePlaceholder": "Назва нового списку (необов'язково)",
+    "combineSuccess": "Списки об'єднано",
+    "combineError": "Не вдалося об'єднати",
+    "combining": "Об'єднання...",
+    "noShoppingList": "Немає списку покупок",
+    "hasShoppingList": "Має список покупок"
   }
 }

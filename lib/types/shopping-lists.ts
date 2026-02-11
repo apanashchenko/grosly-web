@@ -57,3 +57,9 @@ export interface ShoppingListResponse {
   createdAt: string
   updatedAt: string
 }
+
+export interface CombineShoppingListsRequest {
+  name?: string
+  listIds: string[]
+  groupedByCategories?: boolean
+}

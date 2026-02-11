@@ -74,6 +74,14 @@
     "groupByCategory": "Group by category",
     "smartGroup": "Smart group",
     "smartGrouping": "Grouping...",
+    "combineButton": "Combine",
+    "combineCancel": "Cancel",
+    "combineSelected": "Combine ({count})",
+    "combineNamePlaceholder": "New list name (optional)",
+    "combineSuccess": "Lists combined",
+    "combineError": "Failed to combine lists",
+    "combineMin": "Select at least 2 lists",
+    "combining": "Combining...",
     "units": {
       "pcs": "pcs",
       "g": "g",
@@ -88,14 +96,14 @@
   },
   "RecipeGenerator": {
     "heading": "Recipe Generator",
-    "subtitle": "Describe what you want to cook and AI will generate recipes with ingredients.",
+    "subtitle": "Describe what you want to cook and we will generate recipes with ingredients.",
     "queryTitle": "Describe Your Meal",
     "queryDescription": "Tell us what you'd like to cook — number of people, days, dietary preferences",
     "placeholder": "Vegetarian meal plan for 2 people for 3 days",
     "generating": "Generating...",
     "generateButton": "Generate Recipes",
     "unexpectedError": "An unexpected error occurred.",
-    "parsedRequestTitle": "AI Understood",
+    "parsedRequestTitle": "We Understood",
     "people": "{count, plural, one {# person} other {# people}}",
     "days": "{count, plural, one {# day} other {# days}}",
     "mealType": "Meal type: {type}",
@@ -282,6 +290,15 @@
     "deleteCancel": "Cancel",
     "saveRecipe": "Save Recipe",
     "recipeSaved": "Recipe saved!",
-    "viewSavedRecipes": "View saved recipes"
+    "viewSavedRecipes": "View saved recipes",
+    "combineButton": "Combine shopping lists",
+    "combineCancel": "Cancel",
+    "combineSelected": "Combine ({count})",
+    "combineNamePlaceholder": "New list name (optional)",
+    "combineSuccess": "Lists combined",
+    "combineError": "Failed to combine",
+    "combining": "Combining...",
+    "noShoppingList": "No shopping list",
+    "hasShoppingList": "Has shopping list"
   }
 }

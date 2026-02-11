@@ -59,6 +59,9 @@ interface Props {
   onSmartGroup?: () => void
   smartGroupLoading?: boolean
   smartGroupLabel?: string
+  selectable?: boolean
+  selected?: boolean
+  onSelect?: () => void
 }
 
 export function ShoppingListCard({
@@ -85,6 +88,9 @@ export function ShoppingListCard({
   onSmartGroup,
   smartGroupLoading,
   smartGroupLabel,
+  selectable,
+  selected,
+  onSelect,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -110,8 +116,26 @@ export function ShoppingListCard({
   const itemIds = items.map((_, i) => i)
 
   return (
-    <Card>
+    <Card
+      className={cn(
+        selectable && "cursor-pointer transition-colors",
+        selectable && selected && "border-primary bg-primary/5"
+      )}
+      onClick={selectable ? onSelect : undefined}
+    >
       <CardHeader>
+        {selectable && (
+          <div
+            className={cn(
+              "mr-2 flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+              selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted-foreground/30"
+            )}
+          >
+            {selected && <Check className="size-3" />}
+          </div>
+        )}
         {editingTitle ? (
           <div className="flex items-center gap-1.5">
             <Input

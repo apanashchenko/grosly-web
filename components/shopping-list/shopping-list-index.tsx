@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { arrayMove } from "@dnd-kit/sortable"
-import { Loader2, Plus, RefreshCw, ShoppingCart } from "lucide-react"
+import { Loader2, Merge, Plus, RefreshCw, ShoppingCart, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -18,6 +19,7 @@ import {
   updateShoppingListItem,
   deleteShoppingListItem,
   smartGroupShoppingList,
+  combineShoppingLists,
 } from "@/lib/api"
 import {
   UNITS,
@@ -47,6 +49,11 @@ export function ShoppingListIndex() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [smartGroupingListId, setSmartGroupingListId] = useState<string | null>(null)
+  const [combineMode, setCombineMode] = useState(false)
+  const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set())
+  const [combineName, setCombineName] = useState("")
+  const [combining, setCombining] = useState(false)
+  const [combineError, setCombineError] = useState<string | null>(null)
 
   const fetchLists = useCallback(async () => {
     setLoading(true)
@@ -353,17 +360,74 @@ export function ShoppingListIndex() {
     }
   }
 
+  // --- Combine mode ---
+  function toggleSelectList(listId: string) {
+    setSelectedListIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(listId)) {
+        next.delete(listId)
+      } else {
+        next.add(listId)
+      }
+      return next
+    })
+  }
+
+  function exitCombineMode() {
+    setCombineMode(false)
+    setSelectedListIds(new Set())
+    setCombineName("")
+    setCombineError(null)
+  }
+
+  async function handleCombine() {
+    if (selectedListIds.size < 2) return
+    setCombining(true)
+    setCombineError(null)
+    try {
+      const newList = await combineShoppingLists({
+        listIds: Array.from(selectedListIds),
+        ...(combineName.trim() && { name: combineName.trim() }),
+      })
+      setLists((prev) => [newList, ...prev])
+      exitCombineMode()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("combineError")
+      setCombineError(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setCombining(false)
+    }
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <PageHeader title={t("heading")} subtitle={t("subtitle")} />
 
-      <div className="mb-6 flex justify-end">
-        <Button asChild className="shadow-md hover:shadow-lg">
-          <Link href="/shopping-list/new">
-            <Plus />
-            {t("createListButton")}
-          </Link>
-        </Button>
+      <div className="mb-6 flex justify-end gap-2">
+        {combineMode ? (
+          <Button variant="outline" onClick={exitCombineMode}>
+            <X className="size-4" />
+            {t("combineCancel")}
+          </Button>
+        ) : (
+          <>
+            {lists.length >= 2 && (
+              <Button
+                variant="outline"
+                onClick={() => setCombineMode(true)}
+              >
+                <Merge className="size-4" />
+                {t("combineButton")}
+              </Button>
+            )}
+            <Button asChild className="shadow-md hover:shadow-lg">
+              <Link href="/shopping-list/new">
+                <Plus />
+                {t("createListButton")}
+              </Link>
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -389,7 +453,7 @@ export function ShoppingListIndex() {
           return (
             <ShoppingListCard
               key={list.id}
-              defaultOpen={false}
+              defaultOpen={combineMode ? false : false}
               title={list.name}
               description={t("purchased", {
                 checked: checkedCount,
@@ -414,27 +478,59 @@ export function ShoppingListIndex() {
               })}
               createdAt={t("createdAt", { date: formatDate(list.createdAt, locale) })}
               onToggleItem={(index) => toggleItem(list.id, index)}
-              onReorderItems={(from, to) => reorderItems(list.id, from, to)}
-              onEditTitle={(name) => handleEditListName(list.id, name)}
-              onDelete={() => removeList(list.id)}
-              onEditItem={(index, data) => handleEditItem(list.id, index, data)}
-              onDeleteItem={(index) => handleDeleteItem(list.id, index)}
-              onAddItem={(data) => handleAddItem(list.id, data)}
+              onReorderItems={combineMode ? undefined : (from, to) => reorderItems(list.id, from, to)}
+              onEditTitle={combineMode ? undefined : (name) => handleEditListName(list.id, name)}
+              onDelete={combineMode ? undefined : () => removeList(list.id)}
+              onEditItem={combineMode ? undefined : (index, data) => handleEditItem(list.id, index, data)}
+              onDeleteItem={combineMode ? undefined : (index) => handleDeleteItem(list.id, index)}
+              onAddItem={combineMode ? undefined : (data) => handleAddItem(list.id, data)}
               unitOptions={UNITS.map((u) => ({ value: u, label: t(`units.${u}`) }))}
               categoryOptions={categoryOptions}
               categoryPlaceholder={t("categoryPlaceholder")}
               addItemPlaceholder={t("itemNamePlaceholder")}
               grouped={list.groupedByCategories}
-              onToggleGrouped={() => toggleGrouped(list.id)}
+              onToggleGrouped={combineMode ? undefined : () => toggleGrouped(list.id)}
               groupByLabel={t("groupByCategory")}
               uncategorizedLabel={t("uncategorized")}
-              onSmartGroup={() => handleSmartGroup(list.id)}
+              onSmartGroup={combineMode ? undefined : () => handleSmartGroup(list.id)}
               smartGroupLoading={smartGroupingListId === list.id}
               smartGroupLabel={t("smartGroup")}
+              selectable={combineMode}
+              selected={selectedListIds.has(list.id)}
+              onSelect={() => toggleSelectList(list.id)}
             />
           )
         })}
       </div>
+
+      {combineMode && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4 shadow-lg">
+          <div className="mx-auto flex max-w-3xl flex-col gap-3">
+            {combineError && (
+              <p className="text-sm text-destructive">{combineError}</p>
+            )}
+            <div className="flex items-center gap-2">
+              <Input
+                value={combineName}
+                onChange={(e) => setCombineName(e.target.value)}
+                placeholder={t("combineNamePlaceholder")}
+                maxLength={200}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleCombine}
+                disabled={selectedListIds.size < 2 || combining}
+                className="shrink-0 shadow-md"
+              >
+                {combining && <Loader2 className="size-4 animate-spin" />}
+                {combining
+                  ? t("combining")
+                  : t("combineSelected", { count: selectedListIds.size })}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
