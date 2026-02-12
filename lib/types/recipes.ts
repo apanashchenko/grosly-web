@@ -39,10 +39,18 @@ export interface ParsedRequest {
   mealType: string | null
 }
 
-export interface GenerateRecipesResponse {
+export interface SingleRecipeResponse {
+  numberOfPeople: number
+  recipe: GeneratedRecipe
+}
+
+export interface MealPlanResponse {
   parsedRequest: ParsedRequest
   recipes: GeneratedRecipe[]
 }
+
+/** @deprecated Use SingleRecipeResponse or MealPlanResponse */
+export type GenerateRecipesResponse = MealPlanResponse
 
 export interface RecipeInstruction {
   step: number

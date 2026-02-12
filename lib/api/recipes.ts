@@ -1,6 +1,7 @@
 import type {
   ParseRecipeResponse,
-  GenerateRecipesResponse,
+  SingleRecipeResponse,
+  MealPlanResponse,
   SuggestRecipesResponse,
   SaveRecipeRequest,
   SavedRecipeResponse,
@@ -19,8 +20,15 @@ export function parseRecipe(recipeText: string) {
   })
 }
 
-export function generateRecipes(query: string, language: string) {
-  return request<GenerateRecipesResponse>("/recipes/generate", {
+export function generateSingleRecipe(query: string, language: string) {
+  return request<SingleRecipeResponse>("/recipes/single", {
+    method: "POST",
+    body: JSON.stringify({ query, language }),
+  })
+}
+
+export function generateMealPlan(query: string, language: string) {
+  return request<MealPlanResponse>("/recipes/meal-plan", {
     method: "POST",
     body: JSON.stringify({ query, language }),
   })

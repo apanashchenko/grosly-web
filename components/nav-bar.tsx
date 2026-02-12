@@ -8,6 +8,7 @@ import {
   ChefHat,
   Sparkles,
   Lightbulb,
+  CalendarDays,
   ShoppingCart,
   Settings,
   Tag,
@@ -53,7 +54,8 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "recipes",
     items: [
       { href: "/", icon: ChefHat, key: "parseRecipe" },
-      { href: "/generate", icon: Sparkles, key: "generateRecipes" },
+      { href: "/single", icon: Sparkles, key: "generateRecipe" },
+      { href: "/meal-plan", icon: CalendarDays, key: "mealPlan" },
       { href: "/suggest", icon: Lightbulb, key: "suggestRecipes" },
       { href: "/recipes", icon: Bookmark, key: "savedRecipes" },
     ],
