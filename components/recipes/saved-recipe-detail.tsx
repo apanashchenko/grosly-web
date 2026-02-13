@@ -5,10 +5,20 @@ import { useLocale, useTranslations } from "next-intl"
 import { arrayMove } from "@dnd-kit/sortable"
 import {
   ArrowLeft,
+  Check,
+  ClipboardList,
   Loader2,
+  Pencil,
+  Plus,
   RefreshCw,
+  ShoppingCart,
+  Sparkles,
+  X,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Card,
   CardContent,
@@ -20,16 +30,21 @@ import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
-import { Link } from "@/i18n/navigation"
+import { MealPlanPickerDialog } from "@/components/meal-plans/meal-plan-picker-dialog"
+import { Link, useRouter } from "@/i18n/navigation"
 import {
   getSavedRecipe,
   getShoppingList,
   getCategories,
+  parseRecipe,
   updateShoppingList,
   updateShoppingListItem,
   deleteShoppingListItem,
   addShoppingListItems,
   smartGroupShoppingList,
+  getMealPlan,
+  updateMealPlan,
+  updateRecipe,
 } from "@/lib/api"
 import {
   UNITS,
@@ -61,8 +76,10 @@ interface Props {
 }
 
 export function SavedRecipeDetail({ recipeId }: Props) {
+  const router = useRouter()
   const t = useTranslations("SavedRecipes")
   const tList = useTranslations("ShoppingList")
+  const tPlans = useTranslations("MealPlans")
   const locale = useLocale()
   const { localizeCategoryName } = useCategoryLocalization()
 
@@ -73,6 +90,16 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const [list, setList] = useState<ShoppingListResponse | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [smartGrouping, setSmartGrouping] = useState(false)
+  const [planPickerOpen, setPlanPickerOpen] = useState(false)
+  const [removingFromPlanId, setRemovingFromPlanId] = useState<string | null>(null)
+
+  // Recipe editing state
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editingText, setEditingText] = useState(false)
+  const [editText, setEditText] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [creatingList, setCreatingList] = useState(false)
 
   const fetchRecipe = useCallback(async () => {
     setLoading(true)
@@ -112,6 +139,93 @@ export function SavedRecipeDetail({ recipeId }: Props) {
       ? tList(`units.${unit}`)
       : unit
     return label ? `${quantity} ${label}` : `${quantity}`
+  }
+
+  // --- Recipe editing handlers ---
+
+  function startEditTitle() {
+    if (!recipe) return
+    setEditTitle(recipe.title)
+    setEditingTitle(true)
+  }
+
+  function startEditText() {
+    if (!recipe) return
+    setEditText(recipe.text)
+    setEditingText(true)
+  }
+
+  async function handleSaveTitle() {
+    if (!recipe) return
+    const trimmed = editTitle.trim()
+    if (!trimmed || trimmed === recipe.title) {
+      setEditingTitle(false)
+      return
+    }
+    const prev = recipe.title
+    setRecipe((r) => (r ? { ...r, title: trimmed } : r))
+    setEditingTitle(false)
+    setSaving(true)
+    try {
+      await updateRecipe(recipeId, { title: trimmed })
+    } catch {
+      setRecipe((r) => (r ? { ...r, title: prev } : r))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSaveText() {
+    if (!recipe) return
+    const trimmed = editText.trim()
+    if (!trimmed || trimmed === recipe.text) {
+      setEditingText(false)
+      return
+    }
+    const prev = recipe.text
+    setRecipe((r) => (r ? { ...r, text: trimmed } : r))
+    setEditingText(false)
+    setSaving(true)
+    try {
+      await updateRecipe(recipeId, { text: trimmed })
+    } catch {
+      setRecipe((r) => (r ? { ...r, text: prev } : r))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // --- Create shopping list for recipe ---
+
+  async function handleCreateShoppingList(autoGenerate: boolean) {
+    if (!recipe) return
+    setCreatingList(true)
+    try {
+      let items: { name: string; quantity: number; unit: string; categoryId?: string }[] = []
+
+      if (autoGenerate) {
+        const parsed = await parseRecipe(recipe.text)
+        items = parsed.ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity ?? 1,
+          unit: ing.unit,
+          ...(ing.categoryId && { categoryId: ing.categoryId }),
+        }))
+      }
+
+      await updateRecipe(recipeId, {
+        isAddToShoppingList: true,
+        items,
+        shoppingListName: recipe.title,
+      })
+      await fetchRecipe()
+      toast.success(t("shoppingListCreated"))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("unexpectedError")
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setCreatingList(false)
+    }
   }
 
   // --- Shopping list handlers ---
@@ -274,16 +388,36 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
+  async function handleRemoveFromPlan(planId: string) {
+    if (!recipe) return
+    setRemovingFromPlanId(planId)
+    try {
+      const plan = await getMealPlan(planId)
+      const remaining = plan.recipes
+        .filter((r) => r.recipeId !== recipeId)
+        .map((r) => r.recipeId)
+      await updateMealPlan(planId, { recipes: remaining })
+      setRecipe((prev) =>
+        prev
+          ? { ...prev, mealPlans: prev.mealPlans.filter((p) => p.id !== planId) }
+          : prev
+      )
+      toast.success(t("removedFromPlanToast"))
+    } catch {
+      // keep as-is
+    } finally {
+      setRemovingFromPlanId(null)
+    }
+  }
+
   const hasShoppingList = recipe?.shoppingListId && list
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/recipes">
-            <ArrowLeft className="size-4" />
-            {t("backToRecipes")}
-          </Link>
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="size-4" />
+          {t("back")}
         </Button>
       </div>
 
@@ -301,12 +435,66 @@ export function SavedRecipeDetail({ recipeId }: Props) {
 
       {recipe && (
         <>
-          <PageHeader
-            title={recipe.title}
-            subtitle={t("detailSubtitle")}
+          {editingTitle ? (
+            <div className="mb-12">
+              <form
+                className="mx-auto flex max-w-xl items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleSaveTitle()
+                }}
+              >
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="text-lg font-bold"
+                  maxLength={300}
+                  autoFocus
+                />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={!editTitle.trim()}
+                >
+                  <Check className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setEditingTitle(false)}
+                >
+                  <X className="size-4" />
+                </Button>
+              </form>
+            </div>
+          ) : (
+            <div className="relative">
+              <PageHeader
+                title={recipe.title}
+                subtitle={t("detailSubtitle")}
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute right-0 top-1 text-muted-foreground"
+                onClick={startEditTitle}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            </div>
+          )}
+
+          <MealPlanPickerDialog
+            open={planPickerOpen}
+            onOpenChange={setPlanPickerOpen}
+            recipeId={recipeId}
+            excludePlanIds={recipe.mealPlans.map((p) => p.id)}
+            onAdded={fetchRecipe}
           />
 
-          <div className={hasShoppingList ? "grid items-start gap-6 lg:grid-cols-2" : ""}>
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -317,21 +505,94 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                   >
                     {t(`source.${recipe.source}`)}
                   </Badge>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    {!editingText && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground"
+                        onClick={startEditText}
+                        disabled={saving}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPlanPickerOpen(true)}
+                    >
+                      <ClipboardList className="size-3.5" />
+                      {tPlans("addToMealPlan")}
+                    </Button>
+                  </div>
                 </div>
                 <CardDescription>
                   {t("createdAt", {
                     date: formatDate(recipe.createdAt, locale),
                   })}
                 </CardDescription>
+                {recipe.mealPlans.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-xs text-muted-foreground">{t("inMealPlans")}:</span>
+                    {recipe.mealPlans.map((plan) => (
+                      <Badge key={plan.id} variant="outline" className="gap-1 text-xs">
+                        <Link href={`/meal-plans/${plan.id}`} className="flex items-center gap-1 hover:underline">
+                          <ClipboardList className="size-3" />
+                          {plan.name}
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={removingFromPlanId !== null}
+                          onClick={() => handleRemoveFromPlan(plan.id)}
+                          className="ml-0.5 rounded-full p-0.5 hover:bg-muted transition-colors disabled:opacity-50"
+                        >
+                          {removingFromPlanId === plan.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <X className="size-3" />
+                          )}
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {recipe.text}
-                </div>
+                {editingText ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="min-h-[200px] text-sm leading-relaxed"
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingText(false)}
+                      >
+                        {t("editCancel")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveText}
+                        disabled={!editText.trim()}
+                      >
+                        {t("editSave")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {recipe.text}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {list && (
+            {list ? (
               <ShoppingListCard
                 title={list.name}
                 description={tList("purchased", {
@@ -375,6 +636,41 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 smartGroupLoading={smartGrouping}
                 smartGroupLabel={tList("smartGroup")}
               />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="size-5" />
+                    {t("noShoppingListTitle")}
+                  </CardTitle>
+                  <CardDescription>
+                    {t("noShoppingListDescription")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <Button
+                    onClick={() => handleCreateShoppingList(true)}
+                    disabled={creatingList}
+                    className="w-full"
+                  >
+                    {creatingList ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-4" />
+                    )}
+                    {t("generateShoppingList")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleCreateShoppingList(false)}
+                    disabled={creatingList}
+                    className="w-full"
+                  >
+                    <Plus className="size-4" />
+                    {t("createEmptyShoppingList")}
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         </>

@@ -5,6 +5,7 @@ import type {
   InviteToSpaceRequest,
   RespondToInvitationRequest,
   InvitationResponse,
+  SpaceInvitation,
   PaginatedResponse,
   PaginationParams,
 } from "@/lib/types"
@@ -53,6 +54,17 @@ export function inviteToSpace(spaceId: string, data: InviteToSpaceRequest) {
 
 export function getMyInvitations() {
   return request<InvitationResponse[]>("/spaces/invitations/my")
+}
+
+export function getSpaceInvitations(spaceId: string) {
+  return request<SpaceInvitation[]>(`/spaces/${encodeURIComponent(spaceId)}/invitations`)
+}
+
+export function deleteSpaceInvitation(spaceId: string, invitationId: string) {
+  return request<void>(
+    `/spaces/${encodeURIComponent(spaceId)}/invitations/${encodeURIComponent(invitationId)}`,
+    { method: "DELETE" }
+  )
 }
 
 export function respondToInvitation(invitationId: string, data: RespondToInvitationRequest) {

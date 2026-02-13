@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Link, usePathname } from "@/i18n/navigation"
 import {
@@ -8,7 +8,9 @@ import {
   ChefHat,
   Sparkles,
   Lightbulb,
+  PenLine,
   CalendarDays,
+  ClipboardList,
   ShoppingCart,
   Settings,
   Tag,
@@ -19,6 +21,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth"
+import { getMyInvitations } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -45,25 +48,36 @@ interface NavItem {
 }
 
 interface NavGroup {
-  labelKey: string
+  labelKey?: string
   items: NavItem[]
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    labelKey: "mealPlansGroup",
+    items: [
+      { href: "/meal-plan", icon: CalendarDays, key: "createPlan" },
+      { href: "/meal-plans", icon: ClipboardList, key: "mealPlans" },
+    ],
+  },
+  {
+    labelKey: "shoppingListGroup",
+    items: [
+      { href: "/shopping-list", icon: ShoppingCart, key: "shoppingList" },
+    ],
+  },
+  {
     labelKey: "recipes",
     items: [
+      { href: "/recipes/new", icon: PenLine, key: "manualRecipe" },
       { href: "/", icon: ChefHat, key: "parseRecipe" },
       { href: "/single", icon: Sparkles, key: "generateRecipe" },
-      { href: "/meal-plan", icon: CalendarDays, key: "mealPlan" },
       { href: "/suggest", icon: Lightbulb, key: "suggestRecipes" },
       { href: "/recipes", icon: Bookmark, key: "savedRecipes" },
     ],
   },
   {
-    labelKey: "lists",
     items: [
-      { href: "/shopping-list", icon: ShoppingCart, key: "shoppingList" },
       { href: "/spaces", icon: Users, key: "spaces" },
     ],
   },
@@ -81,6 +95,14 @@ export function NavBar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const [invitationCount, setInvitationCount] = useState(0)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    getMyInvitations()
+      .then((data) => setInvitationCount(data.filter((i) => i.status === "PENDING").length))
+      .catch(() => {})
+  }, [isAuthenticated])
 
   // While loading or not authenticated, show minimal header
   if (isLoading || !isAuthenticated) {
@@ -107,16 +129,22 @@ export function NavBar() {
           <SheetContent side="left" className="w-72">
             <SheetHeader>
               <SheetTitle>{t("brand")}</SheetTitle>
-              <SheetDescription>{t("subtitle")}</SheetDescription>
+              <SheetDescription>
+                {t("subtitle")}
+                <br />
+                <span className="italic text-muted-foreground/60">{t("subtitleAi")}</span>
+              </SheetDescription>
             </SheetHeader>
 
             <div className="flex flex-col gap-1 px-4">
               {NAV_GROUPS.map((group, groupIndex) => (
-                <div key={group.labelKey}>
+                <div key={group.labelKey ?? group.items[0]?.key}>
                   {groupIndex > 0 && <Separator className="my-3" />}
-                  <h3 className="mb-1 px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {t(group.labelKey)}
-                  </h3>
+                  {group.labelKey && (
+                    <h3 className="mb-1 px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {t(group.labelKey)}
+                    </h3>
+                  )}
                   {group.items.map((item) => {
                     const isActive = pathname === item.href
                     return (
@@ -135,6 +163,11 @@ export function NavBar() {
                         <Link href={item.href}>
                           <item.icon className="size-4" />
                           {t(item.key)}
+                          {item.key === "spaces" && invitationCount > 0 && (
+                            <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                              {invitationCount}
+                            </span>
+                          )}
                         </Link>
                       </Button>
                     )

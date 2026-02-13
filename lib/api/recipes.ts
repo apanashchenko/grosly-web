@@ -1,12 +1,12 @@
 import type {
   ParseRecipeResponse,
   SingleRecipeResponse,
-  MealPlanResponse,
+  GeneratedMealPlanResponse,
   SuggestRecipesResponse,
   SaveRecipeRequest,
   SavedRecipeResponse,
   SavedRecipeListItem,
-  UpdateRecipeTitleRequest,
+  UpdateRecipeRequest,
   PaginatedResponse,
   PaginationParams,
 } from "@/lib/types"
@@ -28,7 +28,7 @@ export function generateSingleRecipe(query: string, language: string) {
 }
 
 export function generateMealPlan(query: string, language: string) {
-  return request<MealPlanResponse>("/recipes/meal-plan", {
+  return request<GeneratedMealPlanResponse>("/recipes/meal-plan", {
     method: "POST",
     body: JSON.stringify({ query, language }),
   })
@@ -61,7 +61,7 @@ export function getSavedRecipe(id: string) {
   return request<SavedRecipeResponse>(`/recipes/${encodeURIComponent(id)}`)
 }
 
-export function updateRecipeTitle(id: string, data: UpdateRecipeTitleRequest) {
+export function updateRecipe(id: string, data: UpdateRecipeRequest) {
   return request<SavedRecipeResponse>(`/recipes/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(data),

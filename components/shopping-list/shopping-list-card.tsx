@@ -62,6 +62,7 @@ interface Props {
   selectable?: boolean
   selected?: boolean
   onSelect?: () => void
+  onOpen?: () => void
 }
 
 export function ShoppingListCard({
@@ -91,6 +92,7 @@ export function ShoppingListCard({
   selectable,
   selected,
   onSelect,
+  onOpen,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -118,10 +120,16 @@ export function ShoppingListCard({
   return (
     <Card
       className={cn(
-        selectable && "cursor-pointer transition-colors",
+        (selectable || onOpen) && "cursor-pointer transition-colors",
         selectable && selected && "border-primary bg-primary/5"
       )}
-      onClick={selectable ? onSelect : undefined}
+      onClick={(e) => {
+        if (selectable) { onSelect?.(); return }
+        if (!onOpen) return
+        const target = e.target as HTMLElement
+        if (target.closest("button, input, a, [role='button']")) return
+        onOpen()
+      }}
     >
       <CardHeader>
         {selectable && (

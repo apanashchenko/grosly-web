@@ -588,6 +588,7 @@ export function ShoppingListIndex() {
               selectable={combineMode}
               selected={selectedListIds.has(list.id)}
               onSelect={() => toggleSelectList(list.id)}
+              onOpen={combineMode ? undefined : () => router.push(activeSpaceId ? `/shopping-list/${list.id}?spaceId=${activeSpaceId}` : `/shopping-list/${list.id}`)}
             />
           )
         })}

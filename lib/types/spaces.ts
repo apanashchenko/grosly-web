@@ -38,11 +38,21 @@ export interface RespondToInvitationRequest {
   action: InvitationAction
 }
 
+export interface SpaceInvitation {
+  id: string
+  email: string
+  inviteeName: string | null
+  inviteeAvatarUrl: string | null
+  status: InvitationStatus
+  createdAt: string
+}
+
 export interface InvitationResponse {
   id: string
   spaceId: string
   spaceName: string
   inviterName: string
+  inviterAvatarUrl: string | null
   status: InvitationStatus
   createdAt: string
 }

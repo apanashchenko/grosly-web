@@ -39,7 +39,7 @@ import { Link, useRouter } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 import {
   getSavedRecipes,
-  updateRecipeTitle,
+  updateRecipe,
   deleteSavedRecipe,
   combineShoppingLists,
 } from "@/lib/api"
@@ -104,7 +104,7 @@ export function SavedRecipesList() {
     )
     setEditingId(null)
     try {
-      await updateRecipeTitle(id, { title: trimmed })
+      await updateRecipe(id, { title: trimmed })
     } catch {
       setRecipes(prev)
     }

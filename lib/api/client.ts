@@ -105,7 +105,12 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
         return undefined as T
       }
 
-      return retryResponse.json()
+      const retryText = await retryResponse.text()
+      if (!retryText) {
+        return undefined as T
+      }
+
+      return JSON.parse(retryText)
     }
 
     // Refresh failed — session expired
@@ -131,5 +136,10 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
     return undefined as T
   }
 
-  return response.json()
+  const text = await response.text()
+  if (!text) {
+    return undefined as T
+  }
+
+  return JSON.parse(text)
 }

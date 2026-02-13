@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import {
   Check,
@@ -38,8 +38,10 @@ import {
   deleteSpace,
   inviteToSpace,
   removeSpaceMember,
+  getSpaceInvitations,
+  deleteSpaceInvitation,
 } from "@/lib/api"
-import type { SpaceResponse } from "@/lib/types"
+import type { SpaceResponse, SpaceInvitation } from "@/lib/types"
 
 interface SpaceCardProps {
   space: SpaceResponse
@@ -59,10 +61,19 @@ export function SpaceCard({ space, currentUserId, onUpdated, onDeleted }: SpaceC
   // Invite
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviting, setInviting] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState<SpaceInvitation[]>([])
 
   const isOwner = space.members.some(
     (m) => m.userId === currentUserId && m.role === "OWNER"
   )
+
+  // Fetch pending invitations when card opens (owner only)
+  useEffect(() => {
+    if (!open || !isOwner) return
+    getSpaceInvitations(space.id)
+      .then(setPendingInvites)
+      .catch(() => {})
+  }, [open, isOwner, space.id])
 
   // --- Edit name/description ---
   async function handleSaveName() {
@@ -102,6 +113,7 @@ export function SpaceCard({ space, currentUserId, onUpdated, onDeleted }: SpaceC
       await inviteToSpace(space.id, { email })
       toast.success(t("inviteSent"))
       setInviteEmail("")
+      getSpaceInvitations(space.id).then(setPendingInvites).catch(() => {})
     } catch (e) {
       const msg = e instanceof Error ? e.message : ""
       if (msg.includes("already a member")) {
@@ -111,6 +123,16 @@ export function SpaceCard({ space, currentUserId, onUpdated, onDeleted }: SpaceC
       }
     } finally {
       setInviting(false)
+    }
+  }
+
+  // --- Cancel invitation ---
+  async function handleCancelInvitation(invitationId: string) {
+    try {
+      await deleteSpaceInvitation(space.id, invitationId)
+      setPendingInvites((prev) => prev.filter((inv) => inv.id !== invitationId))
+    } catch {
+      // no-op
     }
   }
 
@@ -306,6 +328,39 @@ export function SpaceCard({ space, currentUserId, onUpdated, onDeleted }: SpaceC
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+                </div>
+              ))}
+              {pendingInvites.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center gap-3 rounded-lg border border-dashed border-border/60 px-3 py-2 opacity-70"
+                >
+                  {inv.inviteeAvatarUrl ? (
+                    <img
+                      src={inv.inviteeAvatarUrl}
+                      alt={inv.inviteeName ?? inv.email}
+                      className="size-7 rounded-full"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex size-7 items-center justify-center rounded-full bg-muted">
+                      <Mail className="size-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <span className="flex-1 truncate text-sm">
+                    {inv.inviteeName ?? inv.email}
+                  </span>
+                  <Badge variant="outline" className="text-xs">
+                    {t("pendingInvite")}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => handleCancelInvitation(inv.id)}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
                 </div>
               ))}
             </div>

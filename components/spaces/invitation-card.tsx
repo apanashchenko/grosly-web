@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { Loader2 } from "lucide-react"
+import { Loader2, User as UserIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -40,10 +40,26 @@ export function InvitationCard({ invitation, onRespond }: InvitationCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">{invitation.spaceName}</CardTitle>
-        <CardDescription>
-          {t("invitedBy", { name: invitation.inviterName })}
-        </CardDescription>
+        <div className="flex items-center gap-3">
+          {invitation.inviterAvatarUrl ? (
+            <img
+              src={invitation.inviterAvatarUrl}
+              alt={invitation.inviterName}
+              className="size-8 rounded-full shrink-0"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+              <UserIcon className="size-4 text-primary" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <CardTitle className="text-base">{invitation.spaceName}</CardTitle>
+            <CardDescription>
+              {t("invitedBy", { name: invitation.inviterName })}
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-2">

@@ -44,13 +44,13 @@ export interface SingleRecipeResponse {
   recipe: GeneratedRecipe
 }
 
-export interface MealPlanResponse {
+export interface GeneratedMealPlanResponse {
   parsedRequest: ParsedRequest
   recipes: GeneratedRecipe[]
 }
 
-/** @deprecated Use SingleRecipeResponse or MealPlanResponse */
-export type GenerateRecipesResponse = MealPlanResponse
+/** @deprecated Use SingleRecipeResponse or GeneratedMealPlanResponse */
+export type GenerateRecipesResponse = GeneratedMealPlanResponse
 
 export interface RecipeInstruction {
   step: number
@@ -73,7 +73,7 @@ export interface SuggestRecipesResponse {
 
 // --- Saved Recipes ---
 
-export type RecipeSource = "PARSED" | "GENERATED" | "SUGGESTED"
+export type RecipeSource = "PARSED" | "GENERATED" | "SUGGESTED" | "MANUAL"
 
 export interface SaveRecipeRequest {
   title?: string
@@ -84,12 +84,18 @@ export interface SaveRecipeRequest {
   shoppingListName?: string
 }
 
+export interface SavedRecipeMealPlan {
+  id: string
+  name: string
+}
+
 export interface SavedRecipeResponse {
   id: string
   title: string
   source: RecipeSource
   text: string
   shoppingListId: string | null
+  mealPlans: SavedRecipeMealPlan[]
   createdAt: string
   updatedAt: string
 }
@@ -102,6 +108,10 @@ export interface SavedRecipeListItem {
   createdAt: string
 }
 
-export interface UpdateRecipeTitleRequest {
-  title: string
+export interface UpdateRecipeRequest {
+  title?: string
+  text?: string
+  isAddToShoppingList?: boolean
+  items?: ShoppingListItemRequest[]
+  shoppingListName?: string
 }

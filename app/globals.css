@@ -159,3 +159,8 @@
     background-size: 100% 100% !important;
   }
 }
+
+[data-sonner-toast] [data-content] {
+  flex: 1;
+  text-align: center;
+}

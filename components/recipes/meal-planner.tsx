@@ -11,14 +11,22 @@ import {
   Minus,
   Sparkles,
   Bookmark,
+  CalendarDays,
+  ClipboardList,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type {
-  MealPlanResponse,
+  GeneratedMealPlanResponse,
   GeneratedRecipe,
   RecipeIngredient,
 } from "@/lib/types"
-import { generateMealPlan, createShoppingList, saveRecipe } from "@/lib/api"
+import {
+  generateMealPlan,
+  createShoppingList,
+  saveRecipe,
+  createMealPlan,
+  updateMealPlan,
+} from "@/lib/api"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
@@ -64,7 +72,7 @@ export function MealPlanner() {
   const [query, setQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<MealPlanResponse | null>(null)
+  const [result, setResult] = useState<GeneratedMealPlanResponse | null>(null)
   const [selectedRecipes, setSelectedRecipes] = useState<Set<number>>(new Set())
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
   const [queryOpen, setQueryOpen] = useState(true)
@@ -75,9 +83,19 @@ export function MealPlanner() {
   const [recipeToSave, setRecipeToSave] = useState<number | null>(null)
   const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
 
+  // Meal plan saving state
+  const [savedRecipeIds, setSavedRecipeIds] = useState<Map<number, string>>(new Map())
+  const [planRecipes, setPlanRecipes] = useState<Set<number>>(new Set())
+  const [savedListId, setSavedListId] = useState<string | null>(null)
+  const [includeShoppingList, setIncludeShoppingList] = useState(false)
+  const [savingPlan, setSavingPlan] = useState(false)
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
+
   const charCount = query.length
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || isLoading
+
+  const planRecipeCount = planRecipes.size
 
   async function handleSaveRecipe(opts: {
     title: string
@@ -90,7 +108,7 @@ export function MealPlanner() {
 
     setSavingRecipe(true)
     try {
-      await saveRecipe({
+      const saved = await saveRecipe({
         title: opts.title || undefined,
         source: "GENERATED",
         text: serializeRecipeText(recipe),
@@ -107,6 +125,8 @@ export function MealPlanner() {
           : {}),
       })
       setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
+      setSavedRecipeIds((prev) => new Map(prev).set(recipeToSave, saved.id))
+      setPlanRecipes((prev) => new Set(prev).add(recipeToSave))
       setSaveDialogOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : t("unexpectedError"))
@@ -123,6 +143,11 @@ export function MealPlanner() {
     setCheckedItems(new Set())
     setSavedSuccess(false)
     setSavedRecipeIndexes(new Set())
+    setSavedRecipeIds(new Map())
+    setPlanRecipes(new Set())
+    setSavedListId(null)
+    setIncludeShoppingList(false)
+    setSavedPlanId(null)
 
     try {
       const data = await generateMealPlan(query, locale)
@@ -143,6 +168,17 @@ export function MealPlanner() {
     })
     setCheckedItems(new Set())
     setSavedSuccess(false)
+    setSavedListId(null)
+    setIncludeShoppingList(false)
+  }
+
+  function togglePlanRecipe(index: number) {
+    setPlanRecipes((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
   }
 
   const selectedRecipesList = result
@@ -155,7 +191,7 @@ export function MealPlanner() {
     if (!shoppingList) return
     setSavingList(true)
     try {
-      await createShoppingList({
+      const list = await createShoppingList({
         items: shoppingList.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,
@@ -163,10 +199,40 @@ export function MealPlanner() {
         })),
       })
       setSavedSuccess(true)
+      setSavedListId(list.id)
+      setIncludeShoppingList(true)
     } catch {
       setError(t("unexpectedError"))
     } finally {
       setSavingList(false)
+    }
+  }
+
+  async function handleSavePlan() {
+    if (!result || planRecipeCount === 0) return
+    setSavingPlan(true)
+    try {
+      const recipeIds = Array.from(planRecipes)
+        .map((index) => savedRecipeIds.get(index))
+        .filter((id): id is string => !!id)
+
+      const plan = await createMealPlan({
+        numberOfDays: result.parsedRequest.numberOfDays,
+        numberOfPeople: result.parsedRequest.numberOfPeople,
+      })
+
+      await updateMealPlan(plan.id, {
+        recipes: recipeIds,
+        ...(includeShoppingList && savedListId
+          ? { shoppingListId: savedListId }
+          : {}),
+      })
+
+      setSavedPlanId(plan.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } finally {
+      setSavingPlan(false)
     }
   }
 
@@ -266,6 +332,8 @@ export function MealPlanner() {
           {/* Recipe cards */}
           {result?.recipes.map((recipe, index) => {
             const isSelected = selectedRecipes.has(index)
+            const isSaved = savedRecipeIndexes.has(index)
+            const isInPlan = planRecipes.has(index)
             return (
               <RecipeCard
                 key={index}
@@ -277,36 +345,50 @@ export function MealPlanner() {
                 instructionsLabel={t("instructionsLabel")}
                 defaultOpen={false}
                 footer={
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant={isSelected ? "secondary" : "default"}
-                      onClick={() => toggleRecipe(index)}
-                    >
-                      {isSelected ? (
-                        <Minus className="size-4" />
-                      ) : (
-                        <Plus className="size-4" />
-                      )}
-                      {isSelected ? t("removeFromCart") : t("addToCart")}
-                    </Button>
-                    {savedRecipeIndexes.has(index) ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/recipes">
-                          <Check className="size-4" />
-                          {tSave("recipeSaved")}
-                        </Link>
-                      </Button>
-                    ) : (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="outline"
-                        onClick={() => {
-                          setRecipeToSave(index)
-                          setSaveDialogOpen(true)
-                        }}
+                        variant={isSelected ? "secondary" : "default"}
+                        onClick={() => toggleRecipe(index)}
                       >
-                        <Bookmark className="size-4" />
-                        {tSave("saveRecipe")}
+                        {isSelected ? (
+                          <Minus className="size-4" />
+                        ) : (
+                          <Plus className="size-4" />
+                        )}
+                        {isSelected ? t("removeFromCart") : t("addToCart")}
                       </Button>
+                      {isSaved ? (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/recipes">
+                            <Check className="size-4" />
+                            {tSave("recipeSaved")}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setRecipeToSave(index)
+                            setSaveDialogOpen(true)
+                          }}
+                        >
+                          <Bookmark className="size-4" />
+                          {tSave("saveRecipe")}
+                        </Button>
+                      )}
+                    </div>
+                    {isSaved && !savedPlanId && (
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={isInPlan}
+                          onChange={() => togglePlanRecipe(index)}
+                          className="size-4 accent-primary"
+                        />
+                        <CalendarDays className="size-3.5" />
+                        {t("includeInPlan")}
+                      </label>
                     )}
                   </div>
                 }
@@ -350,17 +432,31 @@ export function MealPlanner() {
                 }}
               />
               {savedSuccess ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="gap-1">
-                    <Check className="size-3" />
-                    {t("savedSuccess")}
-                  </Badge>
-                  <Button variant="link" size="sm" asChild>
-                    <Link href="/shopping-list">
-                      <ShoppingCart className="size-4" />
-                      {t("viewShoppingLists")}
-                    </Link>
-                  </Button>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="gap-1">
+                      <Check className="size-3" />
+                      {t("savedSuccess")}
+                    </Badge>
+                    <Button variant="link" size="sm" asChild>
+                      <Link href="/shopping-list">
+                        <ShoppingCart className="size-4" />
+                        {t("viewShoppingLists")}
+                      </Link>
+                    </Button>
+                  </div>
+                  {savedListId && !savedPlanId && (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={includeShoppingList}
+                        onChange={(e) => setIncludeShoppingList(e.target.checked)}
+                        className="size-4 accent-primary"
+                      />
+                      <CalendarDays className="size-3.5" />
+                      {t("includeInPlan")}
+                    </label>
+                  )}
                 </div>
               ) : (
                 <Button
@@ -374,6 +470,37 @@ export function MealPlanner() {
                   {savingList ? t("saving") : t("saveShoppingList")}
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* Save meal plan */}
+          {result && planRecipeCount > 0 && !savedPlanId && (
+            <Button
+              onClick={handleSavePlan}
+              disabled={savingPlan}
+              className="w-full shadow-md hover:shadow-lg"
+              size="lg"
+            >
+              {savingPlan && <LoaderCircle className="animate-spin" />}
+              <ClipboardList className="size-4" />
+              {savingPlan
+                ? t("savingPlan")
+                : t("savePlan", { count: planRecipeCount })}
+            </Button>
+          )}
+
+          {savedPlanId && (
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="gap-1">
+                <Check className="size-3" />
+                {t("planSaved")}
+              </Badge>
+              <Button variant="link" size="sm" asChild>
+                <Link href={`/meal-plans/${savedPlanId}`}>
+                  <ClipboardList className="size-4" />
+                  {t("viewMealPlan")}
+                </Link>
+              </Button>
             </div>
           )}
         </div>
