@@ -153,6 +153,11 @@
   50% { background-position: 100% 50%; }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gradient-text {
     animation: none !important;

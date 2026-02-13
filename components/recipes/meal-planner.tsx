@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -11,8 +11,9 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { GeneratedMealPlanResponse } from "@/lib/types"
-import { generateMealPlan, createMealPlan } from "@/lib/api"
+import { generateMealPlan, streamMealPlan, createMealPlan } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { PageHeader } from "@/components/shared/page-header"
 import { Link } from "@/i18n/navigation"
@@ -38,33 +39,35 @@ export function MealPlanner() {
   const { categoryMap } = useCategories()
 
   const [query, setQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<GeneratedMealPlanResponse | null>(null)
   const [queryOpen, setQueryOpen] = useState(true)
   const [savingPlan, setSavingPlan] = useState(false)
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
   const [includedRecipes, setIncludedRecipes] = useState<Set<number>>(new Set())
 
+  const stream = useStream<GeneratedMealPlanResponse>()
+  const { abort } = stream
+
+  useEffect(() => {
+    return () => abort()
+  }, [abort])
+
+  useEffect(() => {
+    if (stream.result) {
+      setIncludedRecipes(new Set(stream.result.recipes.map((_, i) => i)))
+    }
+  }, [stream.result])
+
   const charCount = query.length
   const isOverLimit = charCount > MAX_LENGTH
-  const isSubmitDisabled = charCount < 3 || isOverLimit || isLoading
+  const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
-  async function handleGenerate() {
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
+  function handleGenerate() {
     setSavedPlanId(null)
-
-    try {
-      const data = await generateMealPlan(query, locale)
-      setResult(data)
-      setIncludedRecipes(new Set(data.recipes.map((_, i) => i)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
-    } finally {
-      setIsLoading(false)
-    }
+    stream.start(
+      (callbacks, signal) =>
+        streamMealPlan(query, locale, callbacks, signal),
+      () => generateMealPlan(query, locale),
+    )
   }
 
   function toggleRecipe(index: number) {
@@ -77,14 +80,14 @@ export function MealPlanner() {
   }
 
   async function handleSavePlan() {
-    if (!result || includedRecipes.size === 0) return
+    if (!stream.result || includedRecipes.size === 0) return
     setSavingPlan(true)
     try {
-      const selected = result.recipes.filter((_, i) => includedRecipes.has(i))
+      const selected = stream.result.recipes.filter((_, i) => includedRecipes.has(i))
       const plan = await createMealPlan({
-        numberOfDays: result.parsedRequest.numberOfDays,
-        numberOfPeople: result.parsedRequest.numberOfPeople,
-        ...(result.description && { description: result.description }),
+        numberOfDays: stream.result.parsedRequest.numberOfDays,
+        numberOfPeople: stream.result.parsedRequest.numberOfPeople,
+        ...(stream.result.description && { description: stream.result.description }),
         recipes: selected.map((recipe) => ({
           title: recipe.dishName,
           source: "GENERATED" as const,
@@ -99,12 +102,17 @@ export function MealPlanner() {
       })
 
       setSavedPlanId(plan.id)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } catch {
+      // save error handled silently
     } finally {
       setSavingPlan(false)
     }
   }
+
+  // Use partial data during streaming, full result after done
+  const partialRecipes = stream.partial?.recipes ?? []
+  const displayRecipes = stream.result?.recipes ?? partialRecipes
+  const displayParsedRequest = stream.result?.parsedRequest ?? stream.partial?.parsedRequest
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -142,8 +150,8 @@ export function MealPlanner() {
                   className="min-h-[120px] resize-y"
                 />
                 <div className="flex items-center justify-between">
-                  {error ? (
-                    <p className="text-sm text-destructive">{error}</p>
+                  {stream.error ? (
+                    <p className="text-sm text-destructive">{stream.error}</p>
                   ) : (
                     <span />
                   )}
@@ -161,10 +169,10 @@ export function MealPlanner() {
               </CardContent>
               <CardFooter className="flex-wrap gap-2">
                 <Button onClick={handleGenerate} disabled={isSubmitDisabled}>
-                  {isLoading && <LoaderCircle className="animate-spin" />}
-                  {isLoading ? t("generating") : t("generateButton")}
+                  {stream.isLoading && <LoaderCircle className="animate-spin" />}
+                  {stream.isLoading ? t("generating") : t("generateButton")}
                 </Button>
-                {result && includedRecipes.size > 0 && !savedPlanId && (
+                {stream.result && includedRecipes.size > 0 && !savedPlanId && (
                   <Button
                     onClick={handleSavePlan}
                     disabled={savingPlan}
@@ -192,27 +200,41 @@ export function MealPlanner() {
 
         {/* Right column — results */}
         <div className="space-y-6">
+          {/* Streaming status */}
+          {stream.isStreaming && !partialRecipes.length && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="size-4 animate-pulse text-primary" />
+              <span className="animate-pulse">{t("streamingMessage")}</span>
+            </div>
+          )}
+
           {/* Parsed request summary */}
-          {result && (
+          {displayParsedRequest && displayParsedRequest.numberOfPeople && (
             <Card>
               <CardHeader>
                 <CardTitle>{t("parsedRequestTitle")}</CardTitle>
-                <CardDescription>
-                  {t("recipesFound", { count: result.recipes.length })}
-                </CardDescription>
+                {stream.result && (
+                  <CardDescription>
+                    {t("recipesFound", { count: stream.result.recipes.length })}
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                <Badge>{t("people", { count: result.parsedRequest.numberOfPeople })}</Badge>
-                <Badge>{t("days", { count: result.parsedRequest.numberOfDays })}</Badge>
-                {result.parsedRequest.mealType && (
+                {displayParsedRequest.numberOfPeople && (
+                  <Badge>{t("people", { count: displayParsedRequest.numberOfPeople })}</Badge>
+                )}
+                {displayParsedRequest.numberOfDays && (
+                  <Badge>{t("days", { count: displayParsedRequest.numberOfDays })}</Badge>
+                )}
+                {displayParsedRequest.mealType && (
                   <Badge variant="secondary">
-                    {t("mealType", { type: result.parsedRequest.mealType })}
+                    {t("mealType", { type: displayParsedRequest.mealType })}
                   </Badge>
                 )}
-                {result.parsedRequest.dietaryRestrictions.length > 0 && (
+                {displayParsedRequest.dietaryRestrictions && displayParsedRequest.dietaryRestrictions.length > 0 && (
                   <Badge variant="outline">
                     {t("restrictions", {
-                      list: result.parsedRequest.dietaryRestrictions.join(", "),
+                      list: displayParsedRequest.dietaryRestrictions.join(", "),
                     })}
                   </Badge>
                 )}
@@ -220,35 +242,41 @@ export function MealPlanner() {
             </Card>
           )}
 
-          {/* Recipe cards */}
-          {result?.recipes.map((recipe, index) => (
-            <RecipeCard
-              key={index}
-              dishName={recipe.dishName}
-              description={recipe.description}
-              cookingTimeLabel={t("cookingTime", { time: recipe.cookingTime })}
-              ingredients={recipe.ingredients}
-              instructions={recipe.instructions}
-              instructionsLabel={t("instructionsLabel")}
-              defaultOpen={false}
-              categoryMap={categoryMap}
-              footer={
-                !savedPlanId ? (
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={includedRecipes.has(index)}
-                      onChange={() => toggleRecipe(index)}
-                      className="size-4 accent-primary"
-                    />
-                    {t("includeInPlan")}
-                  </label>
-                ) : undefined
-              }
-            />
+          {/* Recipe cards — renders during streaming (partial) and after done (full) */}
+          {displayRecipes.map((recipe, index) => (
+            recipe.dishName && (
+              <RecipeCard
+                key={index}
+                dishName={recipe.dishName}
+                description={recipe.description ?? ""}
+                cookingTimeLabel={
+                  recipe.cookingTime
+                    ? t("cookingTime", { time: recipe.cookingTime })
+                    : undefined
+                }
+                ingredients={recipe.ingredients ?? []}
+                instructions={recipe.instructions ?? []}
+                instructionsLabel={t("instructionsLabel")}
+                defaultOpen={false}
+                categoryMap={categoryMap}
+                footer={
+                  stream.result && !savedPlanId ? (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={includedRecipes.has(index)}
+                        onChange={() => toggleRecipe(index)}
+                        className="size-4 accent-primary"
+                      />
+                      {t("includeInPlan")}
+                    </label>
+                  ) : undefined
+                }
+              />
+            )
           ))}
 
-          {result && result.recipes.length === 0 && (
+          {stream.result && stream.result.recipes.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Sparkles className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">

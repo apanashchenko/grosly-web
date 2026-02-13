@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -11,11 +11,13 @@ import {
   X,
   Check,
   Bookmark,
+  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SuggestRecipesResponse } from "@/lib/types"
-import { suggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
+import { suggestRecipes, streamSuggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
@@ -47,9 +49,6 @@ export function RecipeSuggester() {
 
   const [ingredients, setIngredients] = useState<string[]>([])
   const [currentIngredient, setCurrentIngredient] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<SuggestRecipesResponse | null>(null)
   const [selectedRecipeIndex, setSelectedRecipeIndex] = useState<number | null>(
     null
   )
@@ -62,6 +61,22 @@ export function RecipeSuggester() {
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeToSave, setRecipeToSave] = useState<number | null>(null)
   const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
+
+  const stream = useStream<SuggestRecipesResponse>()
+  const { abort } = stream
+
+  useEffect(() => {
+    return () => abort()
+  }, [abort])
+
+  useEffect(() => {
+    if (stream.result) {
+      setSelectedRecipeIndex(null)
+      setCheckedItems(new Set())
+      setSavedSuccess(false)
+      setSavedRecipeIndexes(new Set())
+    }
+  }, [stream.result])
 
   function addIngredient() {
     const trimmed = currentIngredient.trim()
@@ -77,8 +92,8 @@ export function RecipeSuggester() {
   }
 
   async function handleSaveRecipe(opts: { title: string }) {
-    if (recipeToSave === null || !result) return
-    const recipe = result.suggestedRecipes[recipeToSave]
+    if (recipeToSave === null || !stream.result) return
+    const recipe = stream.result.suggestedRecipes[recipeToSave]
     if (!recipe) return
 
     setSavingRecipe(true)
@@ -96,31 +111,20 @@ export function RecipeSuggester() {
       })
       setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
       setSaveDialogOpen(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } catch {
+      // save error handled silently
     } finally {
       setSavingRecipe(false)
     }
   }
 
-  async function handleSearch() {
+  function handleSearch() {
     if (ingredients.length === 0) return
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
-    setSelectedRecipeIndex(null)
-    setCheckedItems(new Set())
-    setSavedSuccess(false)
-    setSavedRecipeIndexes(new Set())
-
-    try {
-      const data = await suggestRecipes(ingredients, locale, strictMode || undefined)
-      setResult(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
-    } finally {
-      setIsLoading(false)
-    }
+    stream.start(
+      (callbacks, signal) =>
+        streamSuggestRecipes(ingredients, locale, callbacks, signal, strictMode || undefined),
+      () => suggestRecipes(ingredients, locale, strictMode || undefined),
+    )
   }
 
   function selectRecipe(index: number) {
@@ -129,9 +133,13 @@ export function RecipeSuggester() {
     setSavedSuccess(false)
   }
 
+  // Use partial data during streaming, full result after done
+  const partialSuggested = stream.partial?.suggestedRecipes ?? []
+  const displayRecipes = stream.result?.suggestedRecipes ?? partialSuggested
+
   const selectedRecipe =
     selectedRecipeIndex !== null
-      ? result?.suggestedRecipes[selectedRecipeIndex] ?? null
+      ? stream.result?.suggestedRecipes[selectedRecipeIndex] ?? null
       : null
 
   const additionalItems = selectedRecipe?.additionalIngredients ?? []
@@ -150,7 +158,7 @@ export function RecipeSuggester() {
       })
       setSavedSuccess(true)
     } catch {
-      setError(t("unexpectedError"))
+      // save error handled silently
     } finally {
       setSavingList(false)
     }
@@ -235,8 +243,8 @@ export function RecipeSuggester() {
                   {t("ingredientCount", { count: ingredients.length })}
                 </p>
 
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
+                {stream.error && (
+                  <p className="text-sm text-destructive">{stream.error}</p>
                 )}
               </CardContent>
               <CardFooter className="flex-col items-start gap-4">
@@ -252,10 +260,10 @@ export function RecipeSuggester() {
                 </div>
                 <Button
                   onClick={handleSearch}
-                  disabled={ingredients.length === 0 || isLoading}
+                  disabled={ingredients.length === 0 || stream.isLoading}
                 >
-                  {isLoading && <LoaderCircle className="animate-spin" />}
-                  {isLoading ? t("searching") : t("findButton")}
+                  {stream.isLoading && <LoaderCircle className="animate-spin" />}
+                  {stream.isLoading ? t("searching") : t("findButton")}
                 </Button>
               </CardFooter>
             </>
@@ -264,92 +272,108 @@ export function RecipeSuggester() {
 
         {/* Right column — suggested recipes */}
         <div className="space-y-6">
-          {result && result.suggestedRecipes.length > 0 && (
+          {/* Streaming status */}
+          {stream.isStreaming && !partialSuggested.length && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="size-4 animate-pulse text-primary" />
+              <span className="animate-pulse">{t("streamingMessage")}</span>
+            </div>
+          )}
+
+          {stream.result && stream.result.suggestedRecipes.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              {t("recipesFound", { count: result.suggestedRecipes.length })}
+              {t("recipesFound", { count: stream.result.suggestedRecipes.length })}
             </p>
           )}
 
-          {result?.suggestedRecipes.map((recipe, index) => {
+          {displayRecipes.map((recipe, index) => {
+            if (!recipe.dishName) return null
             const isSelected = selectedRecipeIndex === index
+            const isDone = !!stream.result
             return (
               <div key={index} className="space-y-3">
                 <RecipeCard
                   dishName={recipe.dishName}
-                  description={recipe.description}
-                  cookingTimeLabel={t("cookingTime", {
-                    time: recipe.cookingTime,
-                  })}
-                  ingredients={recipe.ingredients}
-                  instructions={recipe.instructions}
+                  description={recipe.description ?? ""}
+                  cookingTimeLabel={
+                    recipe.cookingTime
+                      ? t("cookingTime", { time: recipe.cookingTime })
+                      : undefined
+                  }
+                  ingredients={recipe.ingredients ?? []}
+                  instructions={recipe.instructions ?? []}
                   instructionsLabel={t("instructionsLabel")}
                   highlightIngredients={recipe.matchedIngredients}
                   defaultOpen={false}
                   categoryMap={categoryMap}
                   footer={
-                    <div className="flex w-full flex-col gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-sm font-medium text-primary">
-                          {t("youHave")}:
-                        </span>
-                        {recipe.matchedIngredients.map((name) => (
-                          <Badge key={name} variant="default">
-                            {name}
-                          </Badge>
-                        ))}
-                      </div>
-                      {recipe.additionalIngredients.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {t("youNeed")}:
-                          </span>
-                          {recipe.additionalIngredients.map((name) => (
-                            <Badge key={name} variant="outline">
-                              {name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant={isSelected ? "secondary" : "default"}
-                          onClick={() => selectRecipe(index)}
-                        >
-                          {isSelected ? (
-                            <Check className="size-4" />
-                          ) : (
-                            <ShoppingCart className="size-4" />
-                          )}
-                          {isSelected ? t("selected") : t("selectRecipe")}
-                        </Button>
-                        {savedRecipeIndexes.has(index) ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href="/recipes">
-                              <Check className="size-4" />
-                              {tSave("recipeSaved")}
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setRecipeToSave(index)
-                              setSaveDialogOpen(true)
-                            }}
-                          >
-                            <Bookmark className="size-4" />
-                            {tSave("saveRecipe")}
-                          </Button>
+                    isDone ? (
+                      <div className="flex w-full flex-col gap-3">
+                        {recipe.matchedIngredients && recipe.matchedIngredients.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            <span className="text-sm font-medium text-primary">
+                              {t("youHave")}:
+                            </span>
+                            {recipe.matchedIngredients.map((name) => (
+                              <Badge key={name} variant="default">
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
                         )}
+                        {recipe.additionalIngredients && recipe.additionalIngredients.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {t("youNeed")}:
+                            </span>
+                            {recipe.additionalIngredients.map((name) => (
+                              <Badge key={name} variant="outline">
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant={isSelected ? "secondary" : "default"}
+                            onClick={() => selectRecipe(index)}
+                          >
+                            {isSelected ? (
+                              <Check className="size-4" />
+                            ) : (
+                              <ShoppingCart className="size-4" />
+                            )}
+                            {isSelected ? t("selected") : t("selectRecipe")}
+                          </Button>
+                          {savedRecipeIndexes.has(index) ? (
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/recipes">
+                                <Check className="size-4" />
+                                {tSave("recipeSaved")}
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setRecipeToSave(index)
+                                setSaveDialogOpen(true)
+                              }}
+                            >
+                              <Bookmark className="size-4" />
+                              {tSave("saveRecipe")}
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ) : undefined
                   }
                 />
               </div>
             )
           })}
 
-          {result && result.suggestedRecipes.length === 0 && (
+          {stream.result && stream.result.suggestedRecipes.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Lightbulb className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">
@@ -419,7 +443,7 @@ export function RecipeSuggester() {
         saving={savingRecipe}
         defaultTitle={
           recipeToSave !== null
-            ? result?.suggestedRecipes[recipeToSave]?.dishName
+            ? stream.result?.suggestedRecipes[recipeToSave]?.dishName
             : ""
         }
 

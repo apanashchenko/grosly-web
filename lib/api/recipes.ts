@@ -11,6 +11,7 @@ import type {
   PaginationParams,
 } from "@/lib/types"
 import { request } from "./client"
+import { streamRequest, type StreamCallbacks } from "./streaming"
 import { buildPaginationQuery } from "./utils"
 
 export function parseRecipe(recipeText: string) {
@@ -72,4 +73,49 @@ export function deleteSavedRecipe(id: string) {
   return request<void>(`/recipes/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
+}
+
+// Streaming variants
+
+export function streamSingleRecipe(
+  query: string,
+  language: string,
+  callbacks: StreamCallbacks<SingleRecipeResponse>,
+  signal?: AbortSignal,
+) {
+  return streamRequest<SingleRecipeResponse>(
+    "/recipes/single/stream",
+    { query, language },
+    callbacks,
+    signal,
+  )
+}
+
+export function streamMealPlan(
+  query: string,
+  language: string,
+  callbacks: StreamCallbacks<GeneratedMealPlanResponse>,
+  signal?: AbortSignal,
+) {
+  return streamRequest<GeneratedMealPlanResponse>(
+    "/recipes/meal-plan/stream",
+    { query, language },
+    callbacks,
+    signal,
+  )
+}
+
+export function streamSuggestRecipes(
+  ingredients: string[],
+  language: string,
+  callbacks: StreamCallbacks<SuggestRecipesResponse>,
+  signal?: AbortSignal,
+  strictMode?: boolean,
+) {
+  return streamRequest<SuggestRecipesResponse>(
+    "/recipes/suggest/stream",
+    { ingredients, language, ...(strictMode && { strictMode }) },
+    callbacks,
+    signal,
+  )
 }

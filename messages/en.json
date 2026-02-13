@@ -125,7 +125,8 @@
     "savedSuccess": "Shopping list saved!",
     "viewShoppingLists": "View Shopping Lists",
     "noRecipes": "No recipe generated. Try a different query.",
-    "instructionsLabel": "Instructions"
+    "instructionsLabel": "Instructions",
+    "streamingMessage": "We're generating your recipe..."
   },
   "MealPlanner": {
     "heading": "Meal Plan",
@@ -157,7 +158,8 @@
     "includeShoppingList": "Include shopping list",
     "savePlanButton": "Save Plan ({count, plural, one {# recipe} other {# recipes}})",
     "savingPlan": "Saving...",
-    "planSaved": "Plan saved!"
+    "planSaved": "Plan saved!",
+    "streamingMessage": "We're planning your meals..."
   },
   "RecipeSuggester": {
     "heading": "Recipe Suggester",
@@ -185,7 +187,8 @@
     "strictModeLabel": "Only from my ingredients",
     "instructionsLabel": "Instructions",
     "noRecipes": "No recipes found for these ingredients. Try different ones.",
-    "noRecipesStrict": "Can't make a recipe from these ingredients alone. Try turning off strict mode or adding more items."
+    "noRecipesStrict": "Can't make a recipe from these ingredients alone. Try turning off strict mode or adding more items.",
+    "streamingMessage": "We're finding recipes for you..."
   },
   "Preferences": {
     "heading": "Preferences",

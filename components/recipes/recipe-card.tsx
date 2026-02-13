@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, Clock } from "lucide-react"
+import { ChevronDown, Clock, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { RecipeIngredient, RecipeInstruction, Category } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
@@ -20,7 +20,8 @@ import {
 interface Props {
   dishName: string
   description: string
-  cookingTimeLabel: string
+  cookingTimeLabel?: string
+  peopleLabel?: string
   ingredients: RecipeIngredient[]
   instructions?: RecipeInstruction[]
   instructionsLabel?: string
@@ -34,6 +35,7 @@ export function RecipeCard({
   dishName,
   description,
   cookingTimeLabel,
+  peopleLabel,
   ingredients,
   instructions,
   instructionsLabel,
@@ -55,10 +57,18 @@ export function RecipeCard({
         <CardTitle>{dishName}</CardTitle>
         <CardDescription className="flex flex-wrap items-center gap-2">
           {description}
-          <Badge variant="outline" className="gap-1 bg-primary/5 border-primary/20 text-primary">
-            <Clock className="size-3" />
-            {cookingTimeLabel}
-          </Badge>
+          {peopleLabel && (
+            <Badge variant="outline" className="gap-1 bg-primary/5 border-primary/20 text-primary">
+              <Users className="size-3" />
+              {peopleLabel}
+            </Badge>
+          )}
+          {cookingTimeLabel && (
+            <Badge variant="outline" className="gap-1 bg-primary/5 border-primary/20 text-primary">
+              <Clock className="size-3" />
+              {cookingTimeLabel}
+            </Badge>
+          )}
         </CardDescription>
         <CardAction>
           <Button
@@ -80,11 +90,12 @@ export function RecipeCard({
           <CardContent>
             <div className="divide-y">
               {ingredients.map((ingredient, index) => {
+                if (!ingredient.name) return null
                 const isHighlighted =
                   highlightSet?.has(ingredient.name.toLowerCase()) ?? false
                 const qty = ingredient.unit
-                  ? `${ingredient.quantity} ${ingredient.unit.localized}`
-                  : `${ingredient.quantity}`
+                  ? `${ingredient.quantity ?? ""} ${ingredient.unit.localized ?? ""}`
+                  : ingredient.quantity != null ? `${ingredient.quantity}` : ""
                 const category = ingredient.categoryId
                   ? categoryMap?.get(ingredient.categoryId)
                   : undefined
@@ -101,7 +112,7 @@ export function RecipeCard({
                     >
                       {ingredient.name}
                     </span>
-                    <Badge variant="secondary" className="shrink-0">{qty}</Badge>
+                    {qty && <Badge variant="secondary" className="shrink-0">{qty}</Badge>}
                     {category && (
                       <Badge variant="outline" className="shrink-0 text-xs">
                         {category.icon ? `${category.icon} ` : ""}
@@ -120,13 +131,15 @@ export function RecipeCard({
                   </h4>
                 )}
                 <ol className="list-none space-y-2">
-                  {instructions.map((instruction) => (
-                    <li key={instruction.step} className="flex gap-3 py-1">
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        {instruction.step}
-                      </span>
+                  {instructions.map((instruction, idx) => (
+                    <li key={idx} className="flex gap-3 py-1">
+                      {instruction.step != null && (
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {instruction.step}
+                        </span>
+                      )}
                       <span className="text-sm leading-relaxed">
-                        {instruction.text}
+                        {instruction.text ?? ""}
                       </span>
                     </li>
                   ))}

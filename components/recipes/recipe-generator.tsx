@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -8,12 +8,12 @@ import {
   Check,
   Sparkles,
   Bookmark,
-  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SingleRecipeResponse } from "@/lib/types"
-import { generateSingleRecipe, saveRecipe } from "@/lib/api"
+import { generateSingleRecipe, streamSingleRecipe, saveRecipe } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
@@ -29,7 +29,6 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { RecipeCard } from "@/components/recipes/recipe-card"
 
 const MAX_LENGTH = 500
@@ -41,21 +40,25 @@ export function RecipeGenerator() {
   const { categoryMap } = useCategories()
 
   const [query, setQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<SingleRecipeResponse | null>(null)
   const [queryOpen, setQueryOpen] = useState(true)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeSaved, setRecipeSaved] = useState(false)
 
+  const stream = useStream<SingleRecipeResponse>()
+  const { abort } = stream
+
+  useEffect(() => {
+    return () => abort()
+  }, [abort])
+
   const charCount = query.length
   const isOverLimit = charCount > MAX_LENGTH
-  const isSubmitDisabled = charCount < 3 || isOverLimit || isLoading
+  const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
   async function handleSaveRecipe(opts: { title: string }) {
-    if (!result) return
-    const recipe = result.recipe
+    if (!stream.result) return
+    const recipe = stream.result.recipe
 
     setSavingRecipe(true)
     try {
@@ -72,28 +75,26 @@ export function RecipeGenerator() {
       })
       setRecipeSaved(true)
       setSaveDialogOpen(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
+    } catch {
+      // save error handled silently
     } finally {
       setSavingRecipe(false)
     }
   }
 
-  async function handleGenerate() {
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
+  function handleGenerate() {
     setRecipeSaved(false)
-
-    try {
-      const data = await generateSingleRecipe(query, locale)
-      setResult(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unexpectedError"))
-    } finally {
-      setIsLoading(false)
-    }
+    stream.start(
+      (callbacks, signal) =>
+        streamSingleRecipe(query, locale, callbacks, signal),
+      () => generateSingleRecipe(query, locale),
+    )
   }
+
+  // Use partial data during streaming, full result after done
+  const partialRecipe = stream.partial?.recipe
+  const displayRecipe = stream.result?.recipe ?? partialRecipe
+  const displayPeople = stream.result?.numberOfPeople ?? stream.partial?.numberOfPeople
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -131,8 +132,8 @@ export function RecipeGenerator() {
                   className="min-h-[120px] resize-y"
                 />
                 <div className="flex items-center justify-between">
-                  {error ? (
-                    <p className="text-sm text-destructive">{error}</p>
+                  {stream.error ? (
+                    <p className="text-sm text-destructive">{stream.error}</p>
                   ) : (
                     <span />
                   )}
@@ -150,8 +151,8 @@ export function RecipeGenerator() {
               </CardContent>
               <CardFooter>
                 <Button onClick={handleGenerate} disabled={isSubmitDisabled}>
-                  {isLoading && <LoaderCircle className="animate-spin" />}
-                  {isLoading ? t("generating") : t("generateButton")}
+                  {stream.isLoading && <LoaderCircle className="animate-spin" />}
+                  {stream.isLoading ? t("generating") : t("generateButton")}
                 </Button>
               </CardFooter>
             </>
@@ -160,29 +161,36 @@ export function RecipeGenerator() {
 
         {/* Right column — result */}
         <div className="space-y-6">
-          {result && (
-            <>
-              {/* People count badge */}
-              {result.numberOfPeople > 0 && (
-                <div className="flex items-center gap-2">
-                  <Badge className="gap-1">
-                    <Users className="size-3" />
-                    {t("people", { count: result.numberOfPeople })}
-                  </Badge>
-                </div>
-              )}
+          {/* Streaming status */}
+          {stream.isStreaming && !partialRecipe && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="size-4 animate-pulse text-primary" />
+              <span className="animate-pulse">{t("streamingMessage")}</span>
+            </div>
+          )}
 
-              {/* Recipe card */}
-              <RecipeCard
-                dishName={result.recipe.dishName}
-                description={result.recipe.description}
-                cookingTimeLabel={t("cookingTime", { time: result.recipe.cookingTime })}
-                ingredients={result.recipe.ingredients}
-                instructions={result.recipe.instructions}
-                instructionsLabel={t("instructionsLabel")}
-                defaultOpen={true}
-                categoryMap={categoryMap}
-                footer={
+          {/* Recipe card — renders during streaming (partial) and after done (full) */}
+          {displayRecipe?.dishName && (
+            <RecipeCard
+              dishName={displayRecipe.dishName}
+              description={displayRecipe.description ?? ""}
+              peopleLabel={
+                displayPeople && displayPeople > 0
+                  ? t("people", { count: displayPeople })
+                  : undefined
+              }
+              cookingTimeLabel={
+                displayRecipe.cookingTime
+                  ? t("cookingTime", { time: displayRecipe.cookingTime })
+                  : undefined
+              }
+              ingredients={displayRecipe.ingredients ?? []}
+              instructions={displayRecipe.instructions ?? []}
+              instructionsLabel={t("instructionsLabel")}
+              defaultOpen={true}
+              categoryMap={categoryMap}
+              footer={
+                stream.result ? (
                   <div className="flex flex-wrap gap-2">
                     {recipeSaved ? (
                       <Button variant="outline" size="sm" asChild>
@@ -201,12 +209,12 @@ export function RecipeGenerator() {
                       </Button>
                     )}
                   </div>
-                }
-              />
-            </>
+                ) : undefined
+              }
+            />
           )}
 
-          {result && result.recipe.ingredients.length === 0 && (
+          {stream.result && stream.result.recipe.ingredients.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Sparkles className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">
@@ -222,7 +230,7 @@ export function RecipeGenerator() {
         onOpenChange={setSaveDialogOpen}
         onSave={handleSaveRecipe}
         saving={savingRecipe}
-        defaultTitle={result?.recipe.dishName ?? ""}
+        defaultTitle={stream.result?.recipe.dishName ?? ""}
       />
     </main>
   )
