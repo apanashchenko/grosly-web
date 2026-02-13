@@ -12,7 +12,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { UNITS, type ParsedIngredient, type Category } from "@/lib/types"
+import type { ParsedIngredient } from "@/lib/types"
+import { UNITS, type Category } from "@/lib/types"
 import { parseRecipe, getCategories, saveRecipe } from "@/lib/api"
 import { NONE_CATEGORY } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
@@ -43,7 +44,17 @@ import {
 
 const MAX_LENGTH = 5000
 
-export function ManualRecipeCreator() {
+interface ManualRecipeCreatorProps {
+  mode?: "standalone" | "meal-plan"
+  onAdd?: (recipe: { title: string; text: string; ingredients: ParsedIngredient[] }) => void
+  onCancel?: () => void
+}
+
+export function ManualRecipeCreator({
+  mode = "standalone",
+  onAdd,
+  onCancel,
+}: ManualRecipeCreatorProps) {
   const t = useTranslations("ManualRecipe")
   const tList = useTranslations("ShoppingList")
   const tSave = useTranslations("SavedRecipes")
@@ -140,11 +151,7 @@ export function ManualRecipeCreator() {
     )
   }
 
-  async function handleSaveRecipe(opts: {
-    title: string
-    isAddToShoppingList: boolean
-    shoppingListName: string
-  }) {
+  async function handleSaveRecipe(opts: { title: string }) {
     setSavingRecipe(true)
     try {
       const fullText = recipeTitle.trim()
@@ -155,16 +162,14 @@ export function ManualRecipeCreator() {
         title: opts.title || recipeTitle.trim() || undefined,
         source: "MANUAL",
         text: fullText,
-        isAddToShoppingList: opts.isAddToShoppingList || undefined,
-        ...(opts.isAddToShoppingList && ingredients.length > 0
+        ...(ingredients.length > 0
           ? {
-              items: ingredients.map((ing) => ({
+              ingredients: ingredients.map((ing) => ({
                 name: ing.name,
                 quantity: ing.quantity ?? 0,
                 unit: ing.unit,
                 ...(ing.categoryId ? { categoryId: ing.categoryId } : {}),
               })),
-              shoppingListName: opts.shoppingListName || undefined,
             }
           : {}),
       })
@@ -177,11 +182,24 @@ export function ManualRecipeCreator() {
     }
   }
 
-  const canSave = recipeText.trim().length >= 3 && !isOverLimit
+  const canSave = recipeText.trim().length >= 3 && !isOverLimit && ingredients.length > 0
+  const canAddToMealPlan = canSave
+
+  function handleAddToMealPlan() {
+    if (!canAddToMealPlan || !onAdd) return
+    const fullText = recipeTitle.trim()
+      ? `${recipeTitle.trim()}\n\n${recipeText}`
+      : recipeText
+    onAdd({ title: recipeTitle.trim() || recipeText.trim().split("\n")[0].slice(0, 100), text: fullText, ingredients })
+  }
+
+  const Wrapper = mode === "standalone" ? "main" : "div"
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <PageHeader title={t("heading")} subtitle={t("subtitle")} />
+    <Wrapper className={mode === "standalone" ? "mx-auto max-w-2xl px-4 py-12" : undefined}>
+      {mode === "standalone" && (
+        <PageHeader title={t("heading")} subtitle={t("subtitle")} />
+      )}
 
       <div className="space-y-6">
         {/* Recipe text card */}
@@ -402,46 +420,67 @@ export function ManualRecipeCreator() {
                 )}
               </CardContent>
               <CardFooter>
-                <div className="w-full">
-                  {recipeSaved ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="gap-1">
-                        <Check className="size-3" />
-                        {tSave("recipeSaved")}
-                      </Badge>
-                      <Button variant="link" size="sm" asChild>
-                        <Link href="/recipes">
-                          <Bookmark className="size-4" />
-                          {tSave("viewSavedRecipes")}
-                        </Link>
+                <div className="w-full space-y-2">
+                  {mode === "meal-plan" ? (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={onCancel}
+                      >
+                        {t("cancelAddToMealPlan")}
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={handleAddToMealPlan}
+                        disabled={!canAddToMealPlan}
+                      >
+                        <Plus className="size-4" />
+                        {t("addToMealPlan")}
                       </Button>
                     </div>
                   ) : (
-                    <Button
-                      onClick={() => setSaveDialogOpen(true)}
-                      disabled={!canSave}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Bookmark />
-                      {t("saveRecipe")}
-                    </Button>
-                  )}
+                    <>
+                      {recipeSaved ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="gap-1">
+                            <Check className="size-3" />
+                            {tSave("recipeSaved")}
+                          </Badge>
+                          <Button variant="link" size="sm" asChild>
+                            <Link href="/recipes">
+                              <Bookmark className="size-4" />
+                              {tSave("viewSavedRecipes")}
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => setSaveDialogOpen(true)}
+                          disabled={!canSave}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Bookmark />
+                          {t("saveRecipe")}
+                        </Button>
+                      )}
 
-                  <SaveRecipeDialog
-                    open={saveDialogOpen}
-                    onOpenChange={setSaveDialogOpen}
-                    onSave={handleSaveRecipe}
-                    saving={savingRecipe}
-                    defaultTitle={recipeTitle.trim()}
-                    hasItems={ingredients.length > 0}
-                  />
+                      <SaveRecipeDialog
+                        open={saveDialogOpen}
+                        onOpenChange={setSaveDialogOpen}
+                        onSave={handleSaveRecipe}
+                        saving={savingRecipe}
+                        defaultTitle={recipeTitle.trim()}
+                      />
+                    </>
+                  )}
                 </div>
               </CardFooter>
             </>
           )}
         </Card>
       </div>
-    </main>
+    </Wrapper>
   )
 }

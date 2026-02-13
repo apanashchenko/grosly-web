@@ -118,6 +118,11 @@ export function MealPlanPickerDialog({
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{plan.name}</p>
+                    {plan.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {plan.description}
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                       <span className="text-xs text-muted-foreground">
                         {formatDate(plan.createdAt, locale)}

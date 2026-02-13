@@ -118,31 +118,31 @@ export function InlineEditForm({
           </SelectContent>
         </Select>
       )}
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-1.5 ml-auto">
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           onClick={handleSave}
           disabled={!editName.trim()}
           className="text-primary hover:text-primary"
         >
-          <Check className="size-3.5" />
+          <Check className="size-4" />
         </Button>
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           onClick={onCancel}
         >
-          <X className="size-3.5" />
+          <X className="size-4" />
         </Button>
         {onDelete && (
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             onClick={onDelete}
             className="text-destructive hover:text-destructive"
           >
-            <Trash2 className="size-3.5" />
+            <Trash2 className="size-4" />
           </Button>
         )}
       </div>

@@ -1,5 +1,3 @@
-import type { ShoppingListItemRequest } from "./shopping-lists"
-
 export interface IngredientUnit {
   canonical: string
   localized: string
@@ -22,6 +20,7 @@ export interface RecipeIngredient {
   name: string
   quantity: number
   unit: IngredientUnit
+  categoryId: string | null
 }
 
 export interface GeneratedRecipe {
@@ -46,6 +45,7 @@ export interface SingleRecipeResponse {
 
 export interface GeneratedMealPlanResponse {
   parsedRequest: ParsedRequest
+  description: string | null
   recipes: GeneratedRecipe[]
 }
 
@@ -75,13 +75,27 @@ export interface SuggestRecipesResponse {
 
 export type RecipeSource = "PARSED" | "GENERATED" | "SUGGESTED" | "MANUAL"
 
+export interface RecipeIngredientInput {
+  name: string
+  quantity: number
+  unit: string
+  categoryId?: string
+}
+
+export interface RecipeIngredientResponse {
+  id: string
+  name: string
+  quantity: number
+  unit: string
+  category: { id: string; name: string; slug: string; icon: string | null } | null
+  position: number
+}
+
 export interface SaveRecipeRequest {
   title?: string
   source: RecipeSource
   text: string
-  isAddToShoppingList?: boolean
-  items?: ShoppingListItemRequest[]
-  shoppingListName?: string
+  ingredients?: RecipeIngredientInput[]
 }
 
 export interface SavedRecipeMealPlan {
@@ -94,7 +108,7 @@ export interface SavedRecipeResponse {
   title: string
   source: RecipeSource
   text: string
-  shoppingListId: string | null
+  ingredients: RecipeIngredientResponse[]
   mealPlans: SavedRecipeMealPlan[]
   createdAt: string
   updatedAt: string
@@ -104,14 +118,11 @@ export interface SavedRecipeListItem {
   id: string
   title: string
   source: RecipeSource
-  shoppingListId: string | null
   createdAt: string
 }
 
 export interface UpdateRecipeRequest {
   title?: string
   text?: string
-  isAddToShoppingList?: boolean
-  items?: ShoppingListItemRequest[]
-  shoppingListName?: string
+  ingredients?: RecipeIngredientInput[]
 }

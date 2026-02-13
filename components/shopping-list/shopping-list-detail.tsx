@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
-import { Link } from "@/i18n/navigation"
+import { Link, useRouter } from "@/i18n/navigation"
 import { toast } from "sonner"
 import {
   getShoppingList,
@@ -17,6 +17,7 @@ import {
   updateShoppingList,
   updateShoppingListItem,
   deleteShoppingListItem,
+  deleteShoppingList,
   addShoppingListItems,
   smartGroupShoppingList,
   ConflictError,
@@ -46,6 +47,7 @@ interface Props {
 export function ShoppingListDetail({ listId }: Props) {
   const t = useTranslations("ShoppingList")
   const locale = useLocale()
+  const router = useRouter()
   const { localizeCategoryName } = useCategoryLocalization()
   const searchParams = useSearchParams()
   const spaceId = searchParams.get("spaceId") ?? undefined
@@ -252,6 +254,16 @@ export function ShoppingListDetail({ listId }: Props) {
     }
   }
 
+  async function handleDeleteList() {
+    if (!list) return
+    try {
+      await deleteShoppingList(list.id, spaceId)
+      router.push(spaceId ? `/shopping-list?spaceId=${spaceId}` : "/shopping-list")
+    } catch {
+      toast.error(t("unexpectedError"))
+    }
+  }
+
   async function handleSmartGroup() {
     if (!list) return
     setSmartGrouping(true)
@@ -330,6 +342,8 @@ export function ShoppingListDetail({ listId }: Props) {
             categoryOptions={categoryOptions}
             categoryPlaceholder={t("categoryPlaceholder")}
             addItemPlaceholder={t("itemNamePlaceholder")}
+            qtyPlaceholder={t("qtyPlaceholder")}
+            unitPlaceholder={t("unitPlaceholder")}
             grouped={list.groupedByCategories}
             onToggleGrouped={toggleGrouped}
             groupByLabel={t("groupByCategory")}
@@ -337,6 +351,7 @@ export function ShoppingListDetail({ listId }: Props) {
             onSmartGroup={handleSmartGroup}
             smartGroupLoading={smartGrouping}
             smartGroupLabel={t("smartGroup")}
+            onDelete={handleDeleteList}
           />
         </>
       )}

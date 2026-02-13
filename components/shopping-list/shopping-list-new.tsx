@@ -44,11 +44,12 @@ export function ShoppingListNew() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const spaceId = searchParams.get("spaceId") ?? undefined
+  const initialName = searchParams.get("name") ?? ""
   const { localizeCategoryName } = useCategoryLocalization()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
-  const [listName, setListName] = useState("")
+  const [listName, setListName] = useState(initialName)
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState("")
   const [unit, setUnit] = useState("")

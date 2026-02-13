@@ -21,12 +21,16 @@ export function AddItemForm({
   categoryOptions,
   categoryPlaceholder,
   placeholder,
+  qtyPlaceholder,
+  unitPlaceholder,
 }: {
   onAddItem: (data: ItemData) => void
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
   placeholder?: string
+  qtyPlaceholder?: string
+  unitPlaceholder?: string
 }) {
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState("")
@@ -50,17 +54,18 @@ export function AddItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3">
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 pt-3">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={placeholder}
-        className="flex-1 h-7 text-sm"
+        className="min-w-0 flex-1 basis-32 h-7 text-sm"
       />
       <Input
         type="number"
         value={quantity}
         onChange={(e) => setQuantity(e.target.value)}
+        placeholder={qtyPlaceholder}
         min={0}
         step="any"
         className="w-16 h-7 text-sm"
@@ -68,7 +73,7 @@ export function AddItemForm({
       {unitOptions && (
         <Select value={unit} onValueChange={setUnit}>
           <SelectTrigger className="w-20 h-7 text-sm">
-            <SelectValue />
+            <SelectValue placeholder={unitPlaceholder} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -83,7 +88,7 @@ export function AddItemForm({
       )}
       {categoryOptions && (
         <Select value={categoryId} onValueChange={setCategoryId}>
-          <SelectTrigger className="w-28 h-7 text-sm">
+          <SelectTrigger className="min-w-0 flex-1 basis-28 h-7 text-sm">
             <SelectValue placeholder={categoryPlaceholder} />
           </SelectTrigger>
           <SelectContent>

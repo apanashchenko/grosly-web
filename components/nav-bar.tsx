@@ -9,7 +9,6 @@ import {
   Sparkles,
   Lightbulb,
   PenLine,
-  CalendarDays,
   ClipboardList,
   ShoppingCart,
   Settings,
@@ -32,14 +31,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 interface NavItem {
   href: string
@@ -56,7 +47,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: "mealPlansGroup",
     items: [
-      { href: "/meal-plan", icon: CalendarDays, key: "createPlan" },
+      { href: "/meal-plans/new", icon: PenLine, key: "createPlan" },
+      { href: "/meal-plan", icon: Sparkles, key: "generatePlan" },
       { href: "/meal-plans", icon: ClipboardList, key: "mealPlans" },
     ],
   },
@@ -128,59 +120,58 @@ export function NavBar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-72">
             <SheetHeader>
-              <SheetTitle>{t("brand")}</SheetTitle>
+              <SheetTitle className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</SheetTitle>
               <SheetDescription>
                 {t("subtitle")}
-                <br />
-                <span className="italic text-muted-foreground/60">{t("subtitleAi")}</span>
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex flex-col gap-1 px-4">
-              {NAV_GROUPS.map((group, groupIndex) => (
-                <div key={group.labelKey ?? group.items[0]?.key}>
-                  {groupIndex > 0 && <Separator className="my-3" />}
-                  {group.labelKey && (
-                    <h3 className="mb-1 px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {t(group.labelKey)}
-                    </h3>
-                  )}
-                  {group.items.map((item) => {
-                    const isActive = pathname === item.href
-                    return (
-                      <Button
-                        key={item.href}
-                        variant="ghost"
-                        className={cn(
-                          "w-full justify-start gap-3 pl-4 transition-all duration-200",
-                          isActive
-                            ? "bg-primary/10 font-medium text-primary border-l-2 border-primary"
-                            : "hover:translate-x-0.5"
-                        )}
-                        asChild
-                        onClick={() => setOpen(false)}
-                      >
-                        <Link href={item.href}>
-                          <item.icon className="size-4" />
-                          {t(item.key)}
-                          {item.key === "spaces" && invitationCount > 0 && (
-                            <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
-                              {invitationCount}
-                            </span>
+            <div className="flex-1 overflow-y-auto px-4">
+              <div className="flex flex-col gap-1">
+                {NAV_GROUPS.map((group, groupIndex) => (
+                  <div key={group.labelKey ?? group.items[0]?.key}>
+                    {groupIndex > 0 && <Separator className="my-3" />}
+                    {group.labelKey && (
+                      <h3 className="mb-1 px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t(group.labelKey)}
+                      </h3>
+                    )}
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href
+                      return (
+                        <Button
+                          key={item.href}
+                          variant="ghost"
+                          className={cn(
+                            "w-full justify-start gap-3 pl-4 transition-all duration-200",
+                            isActive
+                              ? "bg-primary/10 font-medium text-primary border-l-2 border-primary"
+                              : "hover:translate-x-0.5"
                           )}
-                        </Link>
-                      </Button>
-                    )
-                  })}
-                </div>
-              ))}
+                          asChild
+                          onClick={() => setOpen(false)}
+                        >
+                          <Link href={item.href}>
+                            <item.icon className="size-4" />
+                            {t(item.key)}
+                            {item.key === "spaces" && invitationCount > 0 && (
+                              <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                                {invitationCount}
+                              </span>
+                            )}
+                          </Link>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* User section at bottom of sidebar */}
             {user && (
-              <>
-                <Separator className="my-3 mx-4" />
-                <div className="flex items-center gap-3 px-4 py-2">
+              <div className="mt-auto border-t border-border/50 px-4 py-3">
+                <div className="flex items-center gap-3 py-1">
                   {user.avatarUrl ? (
                     <img
                       src={user.avatarUrl}
@@ -202,20 +193,18 @@ export function NavBar() {
                     </span>
                   </div>
                 </div>
-                <div className="px-4 pt-1">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 pl-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={async () => {
-                      setOpen(false)
-                      await logout()
-                    }}
-                  >
-                    <LogOut className="size-4" />
-                    {t("logout")}
-                  </Button>
-                </div>
-              </>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 pl-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={async () => {
+                    setOpen(false)
+                    await logout()
+                  }}
+                >
+                  <LogOut className="size-4" />
+                  {t("logout")}
+                </Button>
+              </div>
             )}
           </SheetContent>
         </Sheet>
@@ -223,46 +212,6 @@ export function NavBar() {
         <Link href="/" className="text-lg font-bold tracking-tight gradient-text">
           {t("brand")}
         </Link>
-
-        {/* User avatar in top-right */}
-        <div className="ml-auto">
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className="size-7 rounded-full"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <UserIcon className="size-4" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span>{user.name}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {user.email}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => logout()}
-                >
-                  <LogOut className="size-4" />
-                  {t("logout")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
       </div>
     </nav>
   )

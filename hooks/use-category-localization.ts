@@ -1,13 +1,17 @@
 import { useMessages } from "next-intl"
-import type { Category } from "@/lib/types"
+
+interface CategoryLike {
+  name: string
+  slug?: string
+}
 
 export function useCategoryLocalization() {
   const messages = useMessages()
   const catMessages = (messages.Categories ?? {}) as Record<string, unknown>
   const categoryNameMap = (catMessages?.categoryNames ?? {}) as Record<string, string>
 
-  function localizeCategoryName(cat: Category) {
-    return categoryNameMap[cat.slug] ?? cat.name
+  function localizeCategoryName(cat: CategoryLike) {
+    return (cat.slug ? categoryNameMap[cat.slug] : undefined) ?? cat.name
   }
 
   return { localizeCategoryName, categoryNameMap }

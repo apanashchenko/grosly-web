@@ -69,29 +69,19 @@ export function RecipeParser() {
     getCategories().then(setCategories).catch(() => {})
   }, [])
 
-  async function handleSaveRecipe(opts: {
-    title: string
-    isAddToShoppingList: boolean
-    shoppingListName: string
-  }) {
+  async function handleSaveRecipe(opts: { title: string }) {
     setSavingRecipe(true)
     try {
       await saveRecipe({
         title: opts.title || undefined,
         source: "PARSED",
         text: recipeText,
-        isAddToShoppingList: opts.isAddToShoppingList || undefined,
-        ...(opts.isAddToShoppingList
-          ? {
-              items: ingredients.map((ing) => ({
-                name: ing.name,
-                quantity: ing.quantity ?? 0,
-                unit: ing.unit,
-                ...(ing.categoryId ? { categoryId: ing.categoryId } : {}),
-              })),
-              shoppingListName: opts.shoppingListName || undefined,
-            }
-          : {}),
+        ingredients: ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity ?? 0,
+          unit: ing.unit,
+          ...(ing.categoryId ? { categoryId: ing.categoryId } : {}),
+        })),
       })
       setRecipeSaved(true)
       setSaveDialogOpen(false)
@@ -389,7 +379,7 @@ export function RecipeParser() {
                   onOpenChange={setSaveDialogOpen}
                   onSave={handleSaveRecipe}
                   saving={savingRecipe}
-                  hasItems={ingredients.length > 0}
+
                 />
               </CardFooter>
             </>

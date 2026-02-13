@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { ChevronDown, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { RecipeIngredient, RecipeInstruction } from "@/lib/types"
+import type { RecipeIngredient, RecipeInstruction, Category } from "@/lib/types"
+import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -26,6 +27,7 @@ interface Props {
   footer?: React.ReactNode
   defaultOpen?: boolean
   highlightIngredients?: string[]
+  categoryMap?: Map<string, Category>
 }
 
 export function RecipeCard({
@@ -38,8 +40,10 @@ export function RecipeCard({
   footer,
   defaultOpen = true,
   highlightIngredients,
+  categoryMap,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
+  const { localizeCategoryName } = useCategoryLocalization()
 
   const highlightSet = highlightIngredients
     ? new Set(highlightIngredients.map((i) => i.toLowerCase()))
@@ -81,20 +85,29 @@ export function RecipeCard({
                 const qty = ingredient.unit
                   ? `${ingredient.quantity} ${ingredient.unit.localized}`
                   : `${ingredient.quantity}`
+                const category = ingredient.categoryId
+                  ? categoryMap?.get(ingredient.categoryId)
+                  : undefined
                 return (
                   <div
                     key={index}
-                    className="flex flex-wrap items-baseline gap-2 py-3"
+                    className="flex items-baseline gap-2 py-3"
                   >
                     <span
                       className={cn(
-                        "font-medium",
+                        "min-w-0 flex-1 font-medium truncate",
                         isHighlighted && "text-primary bg-primary/10 px-1 rounded"
                       )}
                     >
                       {ingredient.name}
                     </span>
-                    <Badge variant="secondary">{qty}</Badge>
+                    <Badge variant="secondary" className="shrink-0">{qty}</Badge>
+                    {category && (
+                      <Badge variant="outline" className="shrink-0 text-xs">
+                        {category.icon ? `${category.icon} ` : ""}
+                        {localizeCategoryName(category)}
+                      </Badge>
+                    )}
                   </div>
                 )
               })}

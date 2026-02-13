@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { SuggestRecipesResponse } from "@/lib/types"
 import { suggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
+import { useCategories } from "@/hooks/use-categories"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
@@ -42,6 +43,7 @@ export function RecipeSuggester() {
   const t = useTranslations("RecipeSuggester")
   const tSave = useTranslations("SavedRecipes")
   const locale = useLocale()
+  const { categoryMap } = useCategories()
 
   const [ingredients, setIngredients] = useState<string[]>([])
   const [currentIngredient, setCurrentIngredient] = useState("")
@@ -74,11 +76,7 @@ export function RecipeSuggester() {
     setIngredients((prev) => prev.filter((_, i) => i !== index))
   }
 
-  async function handleSaveRecipe(opts: {
-    title: string
-    isAddToShoppingList: boolean
-    shoppingListName: string
-  }) {
+  async function handleSaveRecipe(opts: { title: string }) {
     if (recipeToSave === null || !result) return
     const recipe = result.suggestedRecipes[recipeToSave]
     if (!recipe) return
@@ -89,17 +87,12 @@ export function RecipeSuggester() {
         title: opts.title || undefined,
         source: "SUGGESTED",
         text: serializeRecipeText(recipe),
-        isAddToShoppingList: opts.isAddToShoppingList || undefined,
-        ...(opts.isAddToShoppingList
-          ? {
-              items: recipe.ingredients.map((ing) => ({
-                name: ing.name,
-                quantity: ing.quantity,
-                unit: ing.unit?.canonical ?? "",
-              })),
-              shoppingListName: opts.shoppingListName || undefined,
-            }
-          : {}),
+        ingredients: recipe.ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit?.canonical ?? "",
+          ...(ing.categoryId && { categoryId: ing.categoryId }),
+        })),
       })
       setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
       setSaveDialogOpen(false)
@@ -292,6 +285,7 @@ export function RecipeSuggester() {
                   instructionsLabel={t("instructionsLabel")}
                   highlightIngredients={recipe.matchedIngredients}
                   defaultOpen={false}
+                  categoryMap={categoryMap}
                   footer={
                     <div className="flex w-full flex-col gap-3">
                       <div className="flex flex-wrap gap-2">
@@ -428,11 +422,7 @@ export function RecipeSuggester() {
             ? result?.suggestedRecipes[recipeToSave]?.dishName
             : ""
         }
-        hasItems={
-          recipeToSave !== null
-            ? (result?.suggestedRecipes[recipeToSave]?.ingredients.length ?? 0) > 0
-            : false
-        }
+
       />
     </main>
   )

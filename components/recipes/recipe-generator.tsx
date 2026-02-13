@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
   LoaderCircle,
-  ShoppingCart,
   Check,
   Sparkles,
   Bookmark,
@@ -13,7 +12,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SingleRecipeResponse } from "@/lib/types"
-import { generateSingleRecipe, createShoppingList, saveRecipe } from "@/lib/api"
+import { generateSingleRecipe, saveRecipe } from "@/lib/api"
+import { useCategories } from "@/hooks/use-categories"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { PageHeader } from "@/components/shared/page-header"
@@ -31,7 +31,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { RecipeCard } from "@/components/recipes/recipe-card"
-import { ShoppingListCard } from "@/components/shopping-list/shopping-list-card"
 
 const MAX_LENGTH = 500
 
@@ -39,15 +38,13 @@ export function RecipeGenerator() {
   const t = useTranslations("RecipeGenerator")
   const tSave = useTranslations("SavedRecipes")
   const locale = useLocale()
+  const { categoryMap } = useCategories()
 
   const [query, setQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SingleRecipeResponse | null>(null)
-  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
   const [queryOpen, setQueryOpen] = useState(true)
-  const [savingList, setSavingList] = useState(false)
-  const [savedSuccess, setSavedSuccess] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeSaved, setRecipeSaved] = useState(false)
@@ -56,11 +53,7 @@ export function RecipeGenerator() {
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || isLoading
 
-  async function handleSaveRecipe(opts: {
-    title: string
-    isAddToShoppingList: boolean
-    shoppingListName: string
-  }) {
+  async function handleSaveRecipe(opts: { title: string }) {
     if (!result) return
     const recipe = result.recipe
 
@@ -70,17 +63,12 @@ export function RecipeGenerator() {
         title: opts.title || undefined,
         source: "GENERATED",
         text: serializeRecipeText(recipe),
-        isAddToShoppingList: opts.isAddToShoppingList || undefined,
-        ...(opts.isAddToShoppingList
-          ? {
-              items: recipe.ingredients.map((ing) => ({
-                name: ing.name,
-                quantity: ing.quantity,
-                unit: ing.unit?.canonical ?? "",
-              })),
-              shoppingListName: opts.shoppingListName || undefined,
-            }
-          : {}),
+        ingredients: recipe.ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit?.canonical ?? "",
+          ...(ing.categoryId && { categoryId: ing.categoryId }),
+        })),
       })
       setRecipeSaved(true)
       setSaveDialogOpen(false)
@@ -95,8 +83,6 @@ export function RecipeGenerator() {
     setIsLoading(true)
     setError(null)
     setResult(null)
-    setCheckedItems(new Set())
-    setSavedSuccess(false)
     setRecipeSaved(false)
 
     try {
@@ -106,27 +92,6 @@ export function RecipeGenerator() {
       setError(err instanceof Error ? err.message : t("unexpectedError"))
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const ingredients = result?.recipe.ingredients ?? []
-
-  async function handleSaveList() {
-    if (ingredients.length === 0) return
-    setSavingList(true)
-    try {
-      await createShoppingList({
-        items: ingredients.map((ing) => ({
-          name: ing.name,
-          quantity: ing.quantity,
-          unit: ing.unit?.canonical ?? "",
-        })),
-      })
-      setSavedSuccess(true)
-    } catch {
-      setError(t("unexpectedError"))
-    } finally {
-      setSavingList(false)
     }
   }
 
@@ -216,6 +181,7 @@ export function RecipeGenerator() {
                 instructions={result.recipe.instructions}
                 instructionsLabel={t("instructionsLabel")}
                 defaultOpen={true}
+                categoryMap={categoryMap}
                 footer={
                   <div className="flex flex-wrap gap-2">
                     {recipeSaved ? (
@@ -237,64 +203,10 @@ export function RecipeGenerator() {
                   </div>
                 }
               />
-
-              {/* Shopping list */}
-              {ingredients.length > 0 && (
-                <div className="space-y-4">
-                  <ShoppingListCard
-                    title={t("shoppingListTitle")}
-                    description={t("purchased", {
-                      checked: checkedItems.size,
-                      total: ingredients.length,
-                    })}
-                    items={ingredients.map((ing, index) => ({
-                      name: ing.name,
-                      badge: ing.unit
-                        ? `${ing.quantity} ${ing.unit.localized}`
-                        : `${ing.quantity}`,
-                      noteBadge: null,
-                      checked: checkedItems.has(index),
-                    }))}
-                    onToggleItem={(index) => {
-                      setCheckedItems((prev) => {
-                        const next = new Set(prev)
-                        if (next.has(index)) next.delete(index)
-                        else next.add(index)
-                        return next
-                      })
-                    }}
-                  />
-                  {savedSuccess ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="gap-1">
-                        <Check className="size-3" />
-                        {t("savedSuccess")}
-                      </Badge>
-                      <Button variant="link" size="sm" asChild>
-                        <Link href="/shopping-list">
-                          <ShoppingCart className="size-4" />
-                          {t("viewShoppingLists")}
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={handleSaveList}
-                      disabled={savingList}
-                      className="w-full shadow-md hover:shadow-lg"
-                      size="lg"
-                    >
-                      {savingList && <LoaderCircle className="animate-spin" />}
-                      <ShoppingCart className="size-4" />
-                      {savingList ? t("saving") : t("saveShoppingList")}
-                    </Button>
-                  )}
-                </div>
-              )}
             </>
           )}
 
-          {result && ingredients.length === 0 && (
+          {result && result.recipe.ingredients.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Sparkles className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">
@@ -311,7 +223,6 @@ export function RecipeGenerator() {
         onSave={handleSaveRecipe}
         saving={savingRecipe}
         defaultTitle={result?.recipe.dishName ?? ""}
-        hasItems={ingredients.length > 0}
       />
     </main>
   )

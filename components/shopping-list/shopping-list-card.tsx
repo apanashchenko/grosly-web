@@ -52,6 +52,8 @@ interface Props {
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
   addItemPlaceholder?: string
+  qtyPlaceholder?: string
+  unitPlaceholder?: string
   grouped?: boolean
   onToggleGrouped?: () => void
   groupByLabel?: string
@@ -82,6 +84,8 @@ export function ShoppingListCard({
   categoryOptions,
   categoryPlaceholder,
   addItemPlaceholder,
+  qtyPlaceholder,
+  unitPlaceholder,
   grouped,
   onToggleGrouped,
   groupByLabel,
@@ -220,38 +224,33 @@ export function ShoppingListCard({
           )}
         </CardDescription>
         <CardAction>
-          <div className="flex items-center gap-1">
-            {onSmartGroup && (
+          <div className="flex items-center gap-2">
+            {onSmartGroup && open && (
               <Button
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 onClick={onSmartGroup}
                 disabled={smartGroupLoading || items.length === 0}
                 title={smartGroupLabel}
               >
                 {smartGroupLoading ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Sparkles className="size-3.5" />
+                  <Sparkles className="size-4" />
                 )}
               </Button>
             )}
-            {onToggleGrouped && (
+            {onToggleGrouped && open && (
               <Button
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 onClick={onToggleGrouped}
                 title={groupByLabel}
                 className={cn(
                   grouped && "text-primary bg-primary/10"
                 )}
               >
-                <Layers className="size-3.5" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="ghost" size="icon-xs" onClick={onDelete}>
-                <Trash2 />
+                <Layers className="size-4" />
               </Button>
             )}
             <Button
@@ -332,7 +331,18 @@ export function ShoppingListCard({
               categoryOptions={categoryOptions}
               categoryPlaceholder={categoryPlaceholder}
               placeholder={addItemPlaceholder}
+              qtyPlaceholder={qtyPlaceholder}
+              unitPlaceholder={unitPlaceholder}
             />
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              onClick={onDelete}
+              className="w-full mt-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="size-4" />
+            </Button>
           )}
         </CardContent>
       )}

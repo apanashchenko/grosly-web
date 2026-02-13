@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Script from "next/script"
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Nunito_Sans, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider, hasLocale } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { notFound } from "next/navigation"
@@ -10,11 +10,9 @@ import { NavBar } from "@/components/nav-bar"
 import { Toaster } from "@/components/ui/sonner"
 import "../globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const nunitoSans = Nunito_Sans({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-sans",
 })
 
 const geistMono = Geist_Mono({
@@ -55,7 +53,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale)
 
   return (
-    <html lang={locale} className={inter.variable}>
+    <html lang={locale} className={nunitoSans.variable}>
       <head>
         <Script
           src="https://accounts.google.com/gsi/client"
@@ -63,7 +61,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistMono.variable} antialiased`}
       >
         <NextIntlClientProvider>
           <AuthProvider>

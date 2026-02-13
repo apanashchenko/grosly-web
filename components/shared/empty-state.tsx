@@ -34,7 +34,7 @@ export function EmptyState({
             : "text-muted-foreground/30"
         )}
       />
-      <p className="text-base font-medium">{message}</p>
+      <p className="text-center text-base font-medium">{message}</p>
       {children}
     </div>
   )

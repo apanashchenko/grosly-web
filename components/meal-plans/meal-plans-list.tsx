@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
@@ -93,6 +94,7 @@ export function MealPlansList() {
   // Create dialog state
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState("")
+  const [newDescription, setNewDescription] = useState("")
   const [newDays, setNewDays] = useState("1")
   const [newPeople, setNewPeople] = useState("1")
   const [creating, setCreating] = useState(false)
@@ -131,11 +133,13 @@ export function MealPlansList() {
     try {
       const created = await createMealPlan({
         ...(newName.trim() && { name: newName.trim() }),
+        ...(newDescription.trim() && { description: newDescription.trim() }),
         numberOfDays: parseInt(newDays) || 1,
         numberOfPeople: parseInt(newPeople) || 1,
       })
       setCreateOpen(false)
       setNewName("")
+      setNewDescription("")
       setNewDays("1")
       setNewPeople("1")
       router.push(`/meal-plans/${created.id}`)
@@ -157,6 +161,7 @@ export function MealPlansList() {
           if (!open) {
             setCreateError(null)
             setNewName("")
+            setNewDescription("")
             setNewDays("1")
             setNewPeople("1")
           }
@@ -179,6 +184,15 @@ export function MealPlansList() {
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder={t("namePlaceholder")}
                   maxLength={200}
+                />
+              </div>
+              <div>
+                <Textarea
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder={t("descriptionPlaceholder")}
+                  maxLength={500}
+                  rows={3}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -284,6 +298,11 @@ export function MealPlansList() {
                       <CardTitle className="truncate text-base">
                         {plan.name}
                       </CardTitle>
+                    )}
+                    {plan.description && (
+                      <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
+                        {plan.description}
+                      </p>
                     )}
                     <CardDescription className="mt-0.5 flex flex-wrap items-center gap-2">
                       <span>

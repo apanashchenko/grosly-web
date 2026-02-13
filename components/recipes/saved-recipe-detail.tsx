@@ -2,17 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
-import { arrayMove } from "@dnd-kit/sortable"
 import {
   ArrowLeft,
   Check,
   ClipboardList,
   Loader2,
   Pencil,
-  Plus,
   RefreshCw,
   ShoppingCart,
-  Sparkles,
+  Trash2,
   X,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -29,31 +27,30 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
-import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
 import { MealPlanPickerDialog } from "@/components/meal-plans/meal-plan-picker-dialog"
 import { Link, useRouter } from "@/i18n/navigation"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
   getSavedRecipe,
-  getShoppingList,
-  getCategories,
-  parseRecipe,
-  updateShoppingList,
-  updateShoppingListItem,
-  deleteShoppingListItem,
-  addShoppingListItems,
-  smartGroupShoppingList,
+  createShoppingList,
+  deleteSavedRecipe,
   getMealPlan,
   updateMealPlan,
   updateRecipe,
 } from "@/lib/api"
-import {
-  UNITS,
-  type SavedRecipeResponse,
-  type ShoppingListResponse,
-  type Category,
-  type ShoppingListItemResponse,
-} from "@/lib/types"
+import { UNITS, type SavedRecipeResponse } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
+import { useCategories } from "@/hooks/use-categories"
 
 function formatDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -82,14 +79,12 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const tPlans = useTranslations("MealPlans")
   const locale = useLocale()
   const { localizeCategoryName } = useCategoryLocalization()
+  const { categoryMap } = useCategories()
 
   const [recipe, setRecipe] = useState<SavedRecipeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [list, setList] = useState<ShoppingListResponse | null>(null)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [smartGrouping, setSmartGrouping] = useState(false)
   const [planPickerOpen, setPlanPickerOpen] = useState(false)
   const [removingFromPlanId, setRemovingFromPlanId] = useState<string | null>(null)
 
@@ -107,15 +102,6 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     try {
       const data = await getSavedRecipe(recipeId)
       setRecipe(data)
-
-      if (data.shoppingListId) {
-        const [listData, categoriesData] = await Promise.all([
-          getShoppingList(data.shoppingListId),
-          getCategories().catch(() => [] as Category[]),
-        ])
-        setList(listData)
-        setCategories(categoriesData)
-      }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : t("unexpectedError"))
     } finally {
@@ -127,12 +113,6 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   useEffect(() => {
     fetchRecipe()
   }, [fetchRecipe])
-
-  const categoryOptions: CategoryOption[] = categories.map((c) => ({
-    value: c.id,
-    label: localizeCategoryName(c),
-    icon: c.icon,
-  }))
 
   function formatQty(quantity: number, unit: string): string {
     const label = UNITS.includes(unit as (typeof UNITS)[number])
@@ -195,196 +175,27 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
-  // --- Create shopping list for recipe ---
+  // --- Create shopping list from ingredients ---
 
-  async function handleCreateShoppingList(autoGenerate: boolean) {
-    if (!recipe) return
+  async function handleCreateShoppingList() {
+    if (!recipe || recipe.ingredients.length === 0) return
     setCreatingList(true)
     try {
-      let items: { name: string; quantity: number; unit: string; categoryId?: string }[] = []
-
-      if (autoGenerate) {
-        const parsed = await parseRecipe(recipe.text)
-        items = parsed.ingredients.map((ing) => ({
+      const newList = await createShoppingList({
+        name: recipe.title,
+        items: recipe.ingredients.map((ing) => ({
           name: ing.name,
-          quantity: ing.quantity ?? 1,
+          quantity: ing.quantity,
           unit: ing.unit,
-          ...(ing.categoryId && { categoryId: ing.categoryId }),
-        }))
-      }
-
-      await updateRecipe(recipeId, {
-        isAddToShoppingList: true,
-        items,
-        shoppingListName: recipe.title,
+          ...(ing.category?.id ? { categoryId: ing.category.id } : {}),
+        })),
       })
-      await fetchRecipe()
-      toast.success(t("shoppingListCreated"))
+      router.push(`/shopping-list/${newList.id}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("unexpectedError")
       toast.error(Array.isArray(msg) ? msg[0] : msg)
     } finally {
       setCreatingList(false)
-    }
-  }
-
-  // --- Shopping list handlers ---
-
-  async function toggleItem(index: number) {
-    if (!list) return
-    const item = list.items[index]
-    if (!item) return
-    const newPurchased = !item.purchased
-
-    setList((prev) =>
-      prev
-        ? { ...prev, items: prev.items.map((it, i) => (i === index ? { ...it, purchased: newPurchased } : it)) }
-        : prev
-    )
-
-    try {
-      await updateShoppingListItem(list.id, item.id, { purchased: newPurchased })
-    } catch {
-      setList((prev) =>
-        prev
-          ? { ...prev, items: prev.items.map((it, i) => (i === index ? { ...it, purchased: !newPurchased } : it)) }
-          : prev
-      )
-    }
-  }
-
-  async function reorderItems(fromIndex: number, toIndex: number) {
-    if (!list) return
-    const prevItems = list.items
-    const reordered = arrayMove(list.items, fromIndex, toIndex)
-    setList((prev) => (prev ? { ...prev, items: reordered } : prev))
-
-    try {
-      await updateShoppingList(list.id, {
-        itemPositions: reordered.map((item, i) => ({ id: item.id, position: i })),
-      })
-    } catch {
-      setList((prev) => (prev ? { ...prev, items: prevItems } : prev))
-    }
-  }
-
-  async function handleEditItem(index: number, data: { name: string; quantity: number; unit: string; categoryId?: string }) {
-    if (!list) return
-    const item = list.items[index]
-    if (!item) return
-    const prevItem = { ...item }
-    const newCategory = data.categoryId
-      ? categories.find((c) => c.id === data.categoryId) ?? null
-      : null
-
-    setList((prev) =>
-      prev
-        ? {
-            ...prev,
-            items: prev.items.map((it, i) =>
-              i === index
-                ? { ...it, name: data.name, quantity: data.quantity, unit: data.unit, category: newCategory ? { id: newCategory.id, name: newCategory.name, icon: newCategory.icon } : null }
-                : it
-            ),
-          }
-        : prev
-    )
-
-    try {
-      await updateShoppingListItem(list.id, item.id, { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId })
-    } catch {
-      setList((prev) =>
-        prev
-          ? { ...prev, items: prev.items.map((it, i) => (i === index ? prevItem : it)) }
-          : prev
-      )
-    }
-  }
-
-  async function handleDeleteItem(index: number) {
-    if (!list) return
-    const item = list.items[index]
-    if (!item) return
-    const prevItems = [...list.items]
-
-    setList((prev) =>
-      prev ? { ...prev, items: prev.items.filter((_, i) => i !== index) } : prev
-    )
-
-    try {
-      await deleteShoppingListItem(list.id, item.id)
-    } catch {
-      setList((prev) => (prev ? { ...prev, items: prevItems } : prev))
-    }
-  }
-
-  async function handleAddItem(data: { name: string; quantity: number; unit: string; categoryId?: string }) {
-    if (!list) return
-    const newPosition = list.items.length
-    const tempId = `temp-${Date.now()}`
-    const tempCategory = data.categoryId
-      ? categories.find((c) => c.id === data.categoryId) ?? null
-      : null
-
-    const tempItem: ShoppingListItemResponse = {
-      id: tempId,
-      name: data.name,
-      quantity: data.quantity,
-      unit: data.unit,
-      purchased: false,
-      category: tempCategory ? { id: tempCategory.id, name: tempCategory.name, icon: tempCategory.icon } : null,
-      position: newPosition,
-      createdBy: null,
-    }
-
-    setList((prev) => (prev ? { ...prev, items: [...prev.items, tempItem] } : prev))
-
-    try {
-      const updatedList = await addShoppingListItems(list.id, [
-        { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, position: newPosition },
-      ])
-      setList(updatedList)
-    } catch {
-      setList((prev) =>
-        prev ? { ...prev, items: prev.items.filter((it) => it.id !== tempId) } : prev
-      )
-    }
-  }
-
-  async function handleEditTitle(name: string) {
-    if (!list) return
-    const prevName = list.name
-    setList((prev) => (prev ? { ...prev, name } : prev))
-
-    try {
-      await updateShoppingList(list.id, { name })
-    } catch {
-      setList((prev) => (prev ? { ...prev, name: prevName } : prev))
-    }
-  }
-
-  async function toggleGrouped() {
-    if (!list) return
-    const newValue = !list.groupedByCategories
-    setList((prev) => (prev ? { ...prev, groupedByCategories: newValue } : prev))
-
-    try {
-      await updateShoppingList(list.id, { groupedByCategories: newValue })
-    } catch {
-      setList((prev) => (prev ? { ...prev, groupedByCategories: !newValue } : prev))
-    }
-  }
-
-  async function handleSmartGroup() {
-    if (!list) return
-    setSmartGrouping(true)
-    try {
-      const updatedList = await smartGroupShoppingList(list.id)
-      setList(updatedList)
-    } catch {
-      // keep as-is
-    } finally {
-      setSmartGrouping(false)
     }
   }
 
@@ -410,7 +221,15 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
-  const hasShoppingList = recipe?.shoppingListId && list
+  async function handleDelete() {
+    if (!recipe) return
+    try {
+      await deleteSavedRecipe(recipeId)
+      router.push("/recipes")
+    } catch {
+      // keep on page
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -435,56 +254,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
 
       {recipe && (
         <>
-          {editingTitle ? (
-            <div className="mb-12">
-              <form
-                className="mx-auto flex max-w-xl items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  handleSaveTitle()
-                }}
-              >
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="text-lg font-bold"
-                  maxLength={300}
-                  autoFocus
-                />
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={!editTitle.trim()}
-                >
-                  <Check className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setEditingTitle(false)}
-                >
-                  <X className="size-4" />
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <div className="relative">
-              <PageHeader
-                title={recipe.title}
-                subtitle={t("detailSubtitle")}
-              />
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute right-0 top-1 text-muted-foreground"
-                onClick={startEditTitle}
-              >
-                <Pencil className="size-4" />
-              </Button>
-            </div>
-          )}
+          <PageHeader title={t("recipeTextTitle")} />
 
           <MealPlanPickerDialog
             open={planPickerOpen}
@@ -497,36 +267,55 @@ export function SavedRecipeDetail({ recipeId }: Props) {
           <div className="grid items-start gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <CardTitle>{t("recipeTextTitle")}</CardTitle>
+                <div className="flex justify-end">
                   <Badge
                     variant="outline"
                     className={`text-xs ${SOURCE_STYLES[recipe.source] ?? ""}`}
                   >
                     {t(`source.${recipe.source}`)}
                   </Badge>
-                  <div className="ml-auto flex items-center gap-1.5">
-                    {!editingText && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground"
-                        onClick={startEditText}
-                        disabled={saving}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPlanPickerOpen(true)}
-                    >
-                      <ClipboardList className="size-3.5" />
-                      {tPlans("addToMealPlan")}
-                    </Button>
-                  </div>
                 </div>
+                {editingTitle ? (
+                  <form
+                    className="flex items-center gap-1.5"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleSaveTitle()
+                    }}
+                  >
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="h-8 text-sm font-semibold"
+                      maxLength={300}
+                      autoFocus
+                    />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={!editTitle.trim()}
+                    >
+                      <Check className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => setEditingTitle(false)}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  </form>
+                ) : (
+                  <CardTitle
+                    className="group/title cursor-pointer"
+                    onClick={() => startEditTitle()}
+                  >
+                    {recipe.title}
+                    <Pencil className="ml-1.5 inline size-3 opacity-0 transition-opacity group-hover/title:opacity-60" />
+                  </CardTitle>
+                )}
                 <CardDescription>
                   {t("createdAt", {
                     date: formatDate(recipe.createdAt, locale),
@@ -592,86 +381,113 @@ export function SavedRecipeDetail({ recipeId }: Props) {
               </CardContent>
             </Card>
 
-            {list ? (
-              <ShoppingListCard
-                title={list.name}
-                description={tList("purchased", {
-                  checked: list.items.filter((i) => i.purchased).length,
-                  total: list.items.length,
-                })}
-                items={list.items.map((item) => {
-                  const fullCat = item.category
-                    ? categories.find((c) => c.id === item.category!.id)
-                    : null
-                  return {
-                    id: item.id,
-                    name: item.name,
-                    badge: formatQty(item.quantity, item.unit),
-                    noteBadge: item.category
-                      ? `${item.category.icon ?? ""} ${fullCat ? localizeCategoryName(fullCat) : item.category.name}`.trim()
-                      : null,
-                    checked: item.purchased,
-                    rawQuantity: item.quantity,
-                    rawUnit: item.unit,
-                    rawCategoryId: item.category?.id,
-                  }
-                })}
-                createdAt={tList("createdAt", { date: formatDate(list.createdAt, locale) })}
-                defaultOpen
-                onToggleItem={toggleItem}
-                onReorderItems={reorderItems}
-                onEditTitle={handleEditTitle}
-                onEditItem={handleEditItem}
-                onDeleteItem={handleDeleteItem}
-                onAddItem={handleAddItem}
-                unitOptions={UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))}
-                categoryOptions={categoryOptions}
-                categoryPlaceholder={tList("categoryPlaceholder")}
-                addItemPlaceholder={tList("itemNamePlaceholder")}
-                grouped={list.groupedByCategories}
-                onToggleGrouped={toggleGrouped}
-                groupByLabel={tList("groupByCategory")}
-                uncategorizedLabel={tList("uncategorized")}
-                onSmartGroup={handleSmartGroup}
-                smartGroupLoading={smartGrouping}
-                smartGroupLabel={tList("smartGroup")}
-              />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="size-5" />
-                    {t("noShoppingListTitle")}
-                  </CardTitle>
+            {/* Ingredients card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("ingredientsTitle")}</CardTitle>
+                {recipe.ingredients.length > 0 && (
                   <CardDescription>
-                    {t("noShoppingListDescription")}
+                    {t("ingredientsCount", { count: recipe.ingredients.length })}
                   </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recipe.ingredients.length > 0 ? (
+                  <>
+                    <div className="divide-y">
+                      {recipe.ingredients.map((ing) => (
+                        <div key={ing.id} className="flex items-center gap-2 py-2.5">
+                          <span className="min-w-0 flex-1 font-medium truncate">
+                            {ing.name}
+                          </span>
+                          <Badge variant="secondary" className="shrink-0 tabular-nums">
+                            {formatQty(ing.quantity, ing.unit)}
+                          </Badge>
+                          {ing.category && (
+                            <Badge variant="outline" className="shrink-0">
+                              {ing.category.icon ? `${ing.category.icon} ` : ""}
+                              {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t("noIngredients")}
+                  </p>
+                )}
+                <div className="flex gap-2">
                   <Button
-                    onClick={() => handleCreateShoppingList(true)}
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setPlanPickerOpen(true)}
+                  >
+                    <ClipboardList className="size-4" />
+                    {tPlans("addToMealPlan")}
+                  </Button>
+                  {!editingText && (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={startEditText}
+                      disabled={saving}
+                    >
+                      <Pencil className="size-4" />
+                      {t("editRecipe")}
+                    </Button>
+                  )}
+                </div>
+                {recipe.ingredients.length > 0 && (
+                  <Button
+                    onClick={handleCreateShoppingList}
                     disabled={creatingList}
                     className="w-full"
+                    size="lg"
                   >
                     {creatingList ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
-                      <Sparkles className="size-4" />
+                      <ShoppingCart className="size-4" />
                     )}
-                    {t("generateShoppingList")}
+                    {t("createShoppingList")}
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleCreateShoppingList(false)}
-                    disabled={creatingList}
-                    className="w-full"
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Delete recipe */}
+          <div className="mt-8 flex justify-center">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-4" />
+                  {t("deleteRecipe")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("deleteDescription")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("deleteCancel")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={handleDelete}
                   >
-                    <Plus className="size-4" />
-                    {t("createEmptyShoppingList")}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+                    {t("deleteConfirm")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </>
       )}

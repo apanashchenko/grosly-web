@@ -6,7 +6,7 @@ import {
   type AnimateLayoutChanges,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Check, GripVertical, Trash2 } from "lucide-react"
+import { Check, GripVertical, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -119,31 +119,55 @@ export function SortableItem({
       </button>
       <button
         type="button"
-        onClick={onStartEdit ? onStartEdit : onToggle}
+        onClick={onToggle}
         className="flex flex-1 flex-col gap-0.5 text-left min-w-0"
       >
         <span
           className={cn(
-            "flex flex-wrap items-baseline gap-2 transition-opacity",
+            "font-medium truncate transition-opacity",
             item.checked && "opacity-40 line-through"
           )}
         >
-          <span className="font-medium">{item.name}</span>
-          {item.badge && <Badge variant="secondary">{item.badge}</Badge>}
-          {item.noteBadge && (
-            <Badge variant="outline">{item.noteBadge}</Badge>
-          )}
+          {item.name}
         </span>
-        {item.createdByName && (
-          <span className="self-end text-[11px] leading-none text-muted-foreground/60">{item.createdByName}</span>
-        )}
       </button>
+      <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5 self-stretch justify-between">
+        <div className="flex flex-col items-end gap-0.5">
+          {item.createdByName && (
+            <span className="text-[11px] leading-none text-muted-foreground/60">{item.createdByName}</span>
+          )}
+          {item.noteBadge ? (
+            <Badge variant="outline" className={cn(
+              "transition-opacity text-[11px]",
+              item.checked && "opacity-40"
+            )}>{item.noteBadge}</Badge>
+          ) : !item.createdByName && <span />}
+        </div>
+        <div className="flex items-center gap-1">
+          {item.badge && (
+            <Badge variant="secondary" className={cn(
+              "transition-opacity",
+              item.checked && "opacity-40"
+            )}>{item.badge}</Badge>
+          )}
+          {onStartEdit && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onStartEdit}
+              className="text-muted-foreground/40 hover:text-muted-foreground"
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
       {onDeleteItem && (
         <Button
           variant="ghost"
           size="icon-xs"
           onClick={onDeleteItem}
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+          className="shrink-0 hidden sm:inline-flex opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="size-3.5" />
         </Button>

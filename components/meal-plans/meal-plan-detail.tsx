@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Loader2,
+  LoaderCircle,
   Pencil,
   Plus,
   RefreshCw,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
@@ -45,7 +48,7 @@ import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { RecipePickerDialog } from "@/components/meal-plans/recipe-picker-dialog"
 import { Link, useRouter } from "@/i18n/navigation"
-import { getMealPlan, updateMealPlan, deleteMealPlan } from "@/lib/api"
+import { getMealPlan, updateMealPlan, deleteMealPlan, createShoppingList } from "@/lib/api"
 import type { MealPlanResponse } from "@/lib/types"
 
 const SOURCE_STYLES: Record<string, string> = {
@@ -82,6 +85,10 @@ export function MealPlanDetail({ planId }: Props) {
   const [editingName, setEditingName] = useState(false)
   const [editName, setEditName] = useState("")
 
+  // Edit description state
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [editDescription, setEditDescription] = useState("")
+
   // Edit meta state
   const [editingMeta, setEditingMeta] = useState(false)
   const [editDays, setEditDays] = useState("")
@@ -93,6 +100,9 @@ export function MealPlanDetail({ planId }: Props) {
 
   // Expanded recipes
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set())
+
+  // Shopping list generation
+  const [creatingSL, setCreatingSL] = useState(false)
 
   const fetchPlan = useCallback(async () => {
     setLoading(true)
@@ -126,6 +136,19 @@ export function MealPlanDetail({ planId }: Props) {
     }
   }
 
+  async function handleUpdateDescription() {
+    if (!plan) return
+    const trimmed = editDescription.trim() || null
+    const prevDescription = plan.description
+    setPlan((prev) => (prev ? { ...prev, description: trimmed } : prev))
+    setEditingDescription(false)
+    try {
+      await updateMealPlan(plan.id, { description: trimmed })
+    } catch {
+      setPlan((prev) => (prev ? { ...prev, description: prevDescription } : prev))
+    }
+  }
+
   async function handleUpdateMeta() {
     if (!plan) return
     const days = parseInt(editDays) || plan.numberOfDays
@@ -147,21 +170,6 @@ export function MealPlanDetail({ planId }: Props) {
     }
   }
 
-  async function handleRemoveRecipe(recipeId: string) {
-    if (!plan) return
-    const prevRecipes = plan.recipes
-    const remaining = plan.recipes.filter((r) => r.recipeId !== recipeId)
-    setPlan((prev) => (prev ? { ...prev, recipes: remaining } : prev))
-    try {
-      const updated = await updateMealPlan(plan.id, {
-        recipes: remaining.map((r) => r.recipeId),
-      })
-      setPlan(updated)
-    } catch {
-      setPlan((prev) => (prev ? { ...prev, recipes: prevRecipes } : prev))
-    }
-  }
-
   async function handleAddRecipes(recipeIds: string[]) {
     if (!plan) return
     setAddingRecipes(true)
@@ -177,6 +185,30 @@ export function MealPlanDetail({ planId }: Props) {
       // keep dialog open on error
     } finally {
       setAddingRecipes(false)
+    }
+  }
+
+  async function handleCreateShoppingList() {
+    if (!plan || plan.recipes.length === 0) return
+    setCreatingSL(true)
+    try {
+      const items = plan.recipes.flatMap((recipe) =>
+        recipe.ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          ...(ing.category && { categoryId: ing.category.id }),
+        }))
+      )
+      const list = await createShoppingList({
+        name: plan.name,
+        items,
+      })
+      router.push(`/shopping-list/${list.id}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("unexpectedError"))
+    } finally {
+      setCreatingSL(false)
     }
   }
 
@@ -282,6 +314,53 @@ export function MealPlanDetail({ planId }: Props) {
                   </Button>
                 )}
               </div>
+              {editingDescription ? (
+                <form
+                  className="mt-1 flex items-start gap-1.5"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleUpdateDescription()
+                  }}
+                >
+                  <Textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder={t("descriptionPlaceholder")}
+                    maxLength={500}
+                    rows={2}
+                    className="text-sm"
+                    autoFocus
+                  />
+                  <div className="flex shrink-0 flex-col gap-1">
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon-xs"
+                    >
+                      <Check className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => setEditingDescription(false)}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <p
+                  className="group/desc mt-1 cursor-pointer text-sm text-muted-foreground"
+                  onClick={() => {
+                    setEditingDescription(true)
+                    setEditDescription(plan.description ?? "")
+                  }}
+                >
+                  {plan.description || t("descriptionPlaceholder")}
+                  <Pencil className="ml-1.5 inline size-3 opacity-0 transition-opacity group-hover/desc:opacity-60" />
+                </p>
+              )}
               <CardDescription>
                 {t("createdAt", {
                   date: formatDate(plan.createdAt, locale),
@@ -347,21 +426,28 @@ export function MealPlanDetail({ planId }: Props) {
                     <UtensilsCrossed className="size-3" />
                     {t("recipesCount", { count: plan.recipes.length })}
                   </Badge>
-                  {plan.shoppingListId && (
-                    <Link href={`/shopping-list/${plan.shoppingListId}`}>
-                      <Badge variant="outline" className="gap-1 text-primary cursor-pointer">
-                        <ShoppingCart className="size-3" />
-                        {t("viewShoppingList")}
-                      </Badge>
-                    </Link>
-                  )}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Add recipe button */}
-          <div className="mb-4 flex justify-end">
+          {/* Action buttons */}
+          <div className="mb-4 flex flex-wrap justify-end gap-2">
+            {plan.recipes.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateShoppingList}
+                disabled={creatingSL}
+              >
+                {creatingSL ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <ShoppingCart className="size-4" />
+                )}
+                {t("createShoppingList")}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="size-4" />
               {t("addRecipe")}
@@ -381,22 +467,27 @@ export function MealPlanDetail({ planId }: Props) {
             {plan.recipes.map((recipe) => {
               const isExpanded = expandedRecipes.has(recipe.id)
               return (
-                <Card key={recipe.id}>
+                <Card
+                  key={recipe.id}
+                  className="cursor-pointer transition-shadow hover:shadow-md hover:border-primary/20"
+                  onClick={() => router.push(`/recipes/${recipe.recipeId}`)}
+                >
                   <CardHeader className="py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {recipe.recipeText && (
                         <Button
                           variant="ghost"
                           size="icon-xs"
                           className="shrink-0 text-muted-foreground"
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setExpandedRecipes((prev) => {
                               const next = new Set(prev)
                               if (next.has(recipe.id)) next.delete(recipe.id)
                               else next.add(recipe.id)
                               return next
                             })
-                          }
+                          }}
                         >
                           <ChevronDown
                             className={cn(
@@ -407,54 +498,19 @@ export function MealPlanDetail({ planId }: Props) {
                         </Button>
                       )}
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="truncate text-sm">
-                          <Link
-                            href={`/recipes/${recipe.recipeId}`}
-                            className="hover:text-primary hover:underline transition-colors"
-                          >
-                            {recipe.recipeTitle}
-                          </Link>
+                        <CardTitle className="text-sm">
+                          {recipe.recipeTitle}
                         </CardTitle>
                       </div>
+                    </div>
+                    <CardAction className="flex items-center gap-1">
                       <Badge
                         variant="outline"
-                        className={`shrink-0 text-xs ${SOURCE_STYLES[recipe.recipeSource] ?? ""}`}
+                        className={`text-xs ${SOURCE_STYLES[recipe.recipeSource] ?? ""}`}
                       >
                         {t(`source.${recipe.recipeSource}`)}
                       </Badge>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="shrink-0 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {t("removeRecipeTitle")}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {t("removeRecipeDescription")}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>
-                              {t("removeRecipeCancel")}
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              variant="destructive"
-                              onClick={() => handleRemoveRecipe(recipe.recipeId)}
-                            >
-                              {t("removeRecipeConfirm")}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                    </CardAction>
                   </CardHeader>
                   {isExpanded && recipe.recipeText && (
                     <CardContent className="pt-0">

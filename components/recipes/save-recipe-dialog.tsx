@@ -13,20 +13,13 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 
 interface SaveRecipeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (opts: {
-    title: string
-    isAddToShoppingList: boolean
-    shoppingListName: string
-  }) => void
+  onSave: (opts: { title: string }) => void
   saving: boolean
   defaultTitle?: string
-  hasItems?: boolean
 }
 
 export function SaveRecipeDialog({
@@ -35,27 +28,18 @@ export function SaveRecipeDialog({
   onSave,
   saving,
   defaultTitle = "",
-  hasItems = false,
 }: SaveRecipeDialogProps) {
   const t = useTranslations("SaveRecipeDialog")
   const [title, setTitle] = useState(defaultTitle)
-  const [addToList, setAddToList] = useState(false)
-  const [listName, setListName] = useState("")
 
   useEffect(() => {
     if (open) {
       setTitle(defaultTitle)
-      setAddToList(false)
-      setListName("")
     }
   }, [open, defaultTitle])
 
   function handleSave() {
-    onSave({
-      title: title.trim(),
-      isAddToShoppingList: addToList,
-      shoppingListName: listName.trim(),
-    })
+    onSave({ title: title.trim() })
   }
 
   return (
@@ -66,38 +50,12 @@ export function SaveRecipeDialog({
           <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t("titlePlaceholder")}
-            maxLength={100}
-          />
-
-          {hasItems && (
-            <>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="add-to-list"
-                  checked={addToList}
-                  onCheckedChange={setAddToList}
-                />
-                <Label htmlFor="add-to-list" className="cursor-pointer text-sm">
-                  {t("alsoCreateShoppingList")}
-                </Label>
-              </div>
-
-              {addToList && (
-                <Input
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder={t("shoppingListNamePlaceholder")}
-                  maxLength={100}
-                />
-              )}
-            </>
-          )}
-        </div>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t("titlePlaceholder")}
+          maxLength={100}
+        />
 
         <DialogFooter>
           <Button

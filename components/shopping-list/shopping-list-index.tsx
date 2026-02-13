@@ -569,7 +569,7 @@ export function ShoppingListIndex() {
               createdAt={t("createdAt", { date: formatDate(list.createdAt, locale) })}
               onToggleItem={(index) => toggleItem(list.id, index)}
               onReorderItems={combineMode ? undefined : (from, to) => reorderItems(list.id, from, to)}
-              onEditTitle={combineMode ? undefined : (name) => handleEditListName(list.id, name)}
+              onEditTitle={undefined}
               onDelete={combineMode ? undefined : () => removeList(list.id)}
               onEditItem={combineMode ? undefined : (index, data) => handleEditItem(list.id, index, data)}
               onDeleteItem={combineMode ? undefined : (index) => handleDeleteItem(list.id, index)}
@@ -578,6 +578,8 @@ export function ShoppingListIndex() {
               categoryOptions={categoryOptions}
               categoryPlaceholder={t("categoryPlaceholder")}
               addItemPlaceholder={t("itemNamePlaceholder")}
+              qtyPlaceholder={t("qtyPlaceholder")}
+              unitPlaceholder={t("unitPlaceholder")}
               grouped={list.groupedByCategories}
               onToggleGrouped={combineMode ? undefined : () => toggleGrouped(list.id)}
               groupByLabel={t("groupByCategory")}
