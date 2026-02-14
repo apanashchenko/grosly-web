@@ -74,7 +74,7 @@ export interface SuggestRecipesResponse {
 
 // --- Saved Recipes ---
 
-export type RecipeSource = "PARSED" | "PARSED_IMAGE" | "GENERATED" | "SUGGESTED" | "MANUAL"
+export type RecipeSource = "PARSED" | "PARSED_IMAGE" | "GENERATED" | "SUGGESTED" | "MANUAL" | "MEAL_PLAN"
 
 export interface RecipeIngredientInput {
   name: string

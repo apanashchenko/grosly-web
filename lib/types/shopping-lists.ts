@@ -23,6 +23,7 @@ export interface UpdateShoppingListRequest {
   items?: ShoppingListItemRequest[]
   itemPositions?: ItemPosition[]
   groupedByCategories?: boolean
+  spaceId?: string | null
   version?: number
 }
 

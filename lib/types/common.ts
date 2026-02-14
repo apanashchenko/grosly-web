@@ -17,4 +17,6 @@ export interface PaginationParams {
   limit?: number
   cursor?: string
   sortBy?: string
+  search?: string
+  filter?: Record<string, string>
 }

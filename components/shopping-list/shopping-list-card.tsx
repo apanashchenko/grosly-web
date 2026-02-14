@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
-import { Check, ChevronDown, Layers, Loader2, Pencil, Sparkles, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Layers, Loader2, Pencil, Sparkles, Trash2, Users, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +62,8 @@ interface Props {
   onSmartGroup?: () => void
   smartGroupLoading?: boolean
   smartGroupLabel?: string
+  onShareToSpace?: () => void
+  shareToSpaceLabel?: string
   selectable?: boolean
   selected?: boolean
   onSelect?: () => void
@@ -95,6 +97,8 @@ export function ShoppingListCard({
   onSmartGroup,
   smartGroupLoading,
   smartGroupLabel,
+  onShareToSpace,
+  shareToSpaceLabel,
   selectable,
   selected,
   onSelect,
@@ -227,6 +231,16 @@ export function ShoppingListCard({
         </CardDescription>
         <CardAction>
           <div className="flex items-center gap-2">
+            {onShareToSpace && !selectable && open && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onShareToSpace}
+                title={shareToSpaceLabel}
+              >
+                <Users className="size-4" />
+              </Button>
+            )}
             {onSmartGroup && open && (
               <Button
                 variant="ghost"
