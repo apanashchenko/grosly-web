@@ -391,6 +391,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
           />
 
           <div className="grid items-start gap-6 lg:grid-cols-2">
+            <div className="space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex justify-end">
@@ -517,6 +518,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 {t("editRecipe")}
               </Button>
             )}
+            </div>
 
             {/* Ingredients card */}
             <Card>
@@ -619,49 +621,45 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                           </div>
                         </form>
                       ) : (
-                        <div key={ing.id}>
-                          <div className="flex w-full items-center gap-2 py-3">
-                            <span className="flex flex-1 min-w-0">
-                              <span className="font-medium truncate">{ing.name}</span>
-                            </span>
-                            <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5">
-                              {ing.category && (
-                                <Badge variant="outline" className="text-[11px]">
-                                  {ing.category.icon ? `${ing.category.icon} ` : ""}
-                                  {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
-                                </Badge>
+                        <div key={ing.id} className="py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="flex-1 min-w-0 font-medium truncate text-sm pl-2">{ing.name}</span>
+                            {ing.category && (
+                              <Badge variant="outline" className="shrink-0 text-[11px]">
+                                {ing.category.icon ? `${ing.category.icon} ` : ""}
+                                {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-end gap-1 mt-0.5">
+                            <Badge variant="secondary" className="tabular-nums">
+                              {formatQty(ing.quantity, ing.unit)}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => startEditIngredient(ing)}
+                              disabled={editingIngId !== null || deletingIngId !== null}
+                              className="text-muted-foreground/40 hover:text-muted-foreground"
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => handleDeleteIngredient(ing.id)}
+                              disabled={editingIngId !== null || deletingIngId !== null}
+                              className="text-destructive/60 hover:text-destructive"
+                            >
+                              {deletingIngId === ing.id ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-3.5" />
                               )}
-                              <div className="flex items-center gap-1">
-                                <Badge variant="secondary" className="tabular-nums">
-                                  {formatQty(ing.quantity, ing.unit)}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  onClick={() => startEditIngredient(ing)}
-                                  disabled={editingIngId !== null || deletingIngId !== null}
-                                  className="text-muted-foreground/40 hover:text-muted-foreground"
-                                >
-                                  <Pencil className="size-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  onClick={() => handleDeleteIngredient(ing.id)}
-                                  disabled={editingIngId !== null || deletingIngId !== null}
-                                  className="text-destructive/60 hover:text-destructive"
-                                >
-                                  {deletingIngId === ing.id ? (
-                                    <Loader2 className="size-3.5 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-3.5" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
+                            </Button>
                           </div>
                           {ing.note && (
-                            <p className="pb-2 px-1 text-xs text-muted-foreground leading-snug">
+                            <p className="pt-1 px-1 text-xs text-muted-foreground leading-snug">
                               {ing.note}
                             </p>
                           )}

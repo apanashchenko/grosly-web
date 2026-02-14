@@ -172,8 +172,8 @@ export function ManualMealPlanCreator() {
       }))
 
       const plan = await createMealPlan({
-        ...(name.trim() && { name: name.trim() }),
-        ...(description.trim() && { description: description.trim() }),
+        name: name.trim(),
+        description: description.trim(),
         numberOfDays: parseInt(numberOfDays) || 1,
         numberOfPeople: parseInt(numberOfPeople) || 1,
         ...(inlineRecipes.length > 0 && { recipes: inlineRecipes }),
@@ -234,6 +234,8 @@ export function ManualMealPlanCreator() {
               onChange={(e) => setName(e.target.value)}
               placeholder={t("namePlaceholder")}
               maxLength={200}
+              required
+              minLength={3}
             />
           </div>
           <div className="space-y-2">
@@ -242,6 +244,8 @@ export function ManualMealPlanCreator() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("descriptionPlaceholder")}
               maxLength={500}
+              required
+              minLength={5}
               className="min-h-[80px]"
             />
           </div>
@@ -476,7 +480,7 @@ export function ManualMealPlanCreator() {
       {/* Save */}
       <Button
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || name.trim().length < 3 || description.trim().length < 5}
         className="w-full"
         size="lg"
       >

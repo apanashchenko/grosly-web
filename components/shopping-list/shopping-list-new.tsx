@@ -68,6 +68,7 @@ export function ShoppingListNew() {
   const [categories, setCategories] = useState<Category[]>([])
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [listName, setListName] = useState(initialName)
+  const [label, setLabel] = useState("")
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState("")
   const [unit, setUnit] = useState("")
@@ -182,6 +183,7 @@ export function ShoppingListNew() {
       }))
       await createShoppingList({
         name: listName.trim() || undefined,
+        label: label.trim() || undefined,
         items,
       }, spaceId)
       router.push(spaceId ? `/shopping-list?spaceId=${spaceId}` : "/shopping-list")
@@ -321,10 +323,16 @@ export function ShoppingListNew() {
               value={listName}
               onChange={(e) => setListName(e.target.value)}
               placeholder={t("listNamePlaceholder")}
+              required
+            />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t("labelPlaceholder")}
             />
             <Button
               onClick={handleCreateList}
-              disabled={pendingItems.length === 0 || creating}
+              disabled={pendingItems.length === 0 || !listName.trim() || creating}
               className="w-full shadow-md hover:shadow-lg"
               size="lg"
             >

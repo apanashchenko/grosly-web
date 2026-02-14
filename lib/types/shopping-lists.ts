@@ -10,6 +10,7 @@ export interface ShoppingListItemRequest {
 
 export interface CreateShoppingListRequest {
   name?: string
+  label?: string
   items: ShoppingListItemRequest[]
 }
 
@@ -20,6 +21,8 @@ export interface ItemPosition {
 
 export interface UpdateShoppingListRequest {
   name?: string
+  label?: string | null
+  isPinned?: boolean
   items?: ShoppingListItemRequest[]
   itemPositions?: ItemPosition[]
   groupedByCategories?: boolean
@@ -63,6 +66,8 @@ export interface UpdateShoppingListItemRequest {
 export interface ShoppingListResponse {
   id: string
   name: string
+  label: string | null
+  isPinned: boolean
   spaceId: string | null
   items: ShoppingListItemResponse[]
   groupedByCategories: boolean

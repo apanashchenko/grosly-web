@@ -114,6 +114,7 @@ export function ItemRow({
                 variant="ghost"
                 size="icon-xs"
                 onClick={onStartEdit}
+                disabled={item.checked}
                 className="text-muted-foreground/40 hover:text-muted-foreground"
               >
                 <Pencil className="size-3.5" />
@@ -124,6 +125,7 @@ export function ItemRow({
                 variant="ghost"
                 size="icon-xs"
                 onClick={onDeleteItem}
+                disabled={item.checked}
                 className="text-destructive/60 hover:text-destructive"
               >
                 <Trash2 className="size-3.5" />

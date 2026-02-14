@@ -4,8 +4,14 @@ import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { arrayMove } from "@dnd-kit/sortable"
-import { ArrowLeft, Loader2, RefreshCw } from "lucide-react"
+import { ArrowLeft, Loader2, RefreshCw, Share2, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { ShoppingListCard, type CategoryOption } from "@/components/shopping-list/shopping-list-card"
@@ -14,6 +20,8 @@ import { toast } from "sonner"
 import {
   getShoppingList,
   getCategories,
+  getSpaces,
+  createShoppingList,
   updateShoppingList,
   updateShoppingListItem,
   deleteShoppingListItem,
@@ -27,6 +35,7 @@ import {
   type ShoppingListResponse,
   type Category,
   type ShoppingListItemResponse,
+  type SpaceResponse,
 } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 
@@ -57,17 +66,22 @@ export function ShoppingListDetail({ listId }: Props) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [smartGrouping, setSmartGrouping] = useState(false)
+  const [spaces, setSpaces] = useState<SpaceResponse[]>([])
+  const [sharingOpen, setSharingOpen] = useState(false)
+  const [sharingLoading, setSharingLoading] = useState(false)
 
   const fetchList = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const [listData, categoriesData] = await Promise.all([
+      const [listData, categoriesData, spacesData] = await Promise.all([
         getShoppingList(listId, spaceId),
         getCategories().catch(() => [] as Category[]),
+        getSpaces({ limit: 100 }).then((res) => res.data).catch(() => [] as SpaceResponse[]),
       ])
       setList(listData)
       setCategories(categoriesData)
+      setSpaces(spacesData)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : t("unexpectedError"))
     } finally {
@@ -254,6 +268,63 @@ export function ShoppingListDetail({ listId }: Props) {
     }
   }
 
+  async function handleTogglePin() {
+    if (!list) return
+    const newPinned = !list.isPinned
+    setList((prev) => (prev ? { ...prev, isPinned: newPinned } : prev))
+
+    try {
+      const updated = await updateShoppingList(list.id, { isPinned: newPinned, version: list.version }, spaceId)
+      setList(updated)
+    } catch (e) {
+      if (handleConflict(e)) return
+      setList((prev) => (prev ? { ...prev, isPinned: !newPinned } : prev))
+    }
+  }
+
+  async function handleEditLabel(newLabel: string | null) {
+    if (!list) return
+    const prevLabel = list.label
+    setList((prev) => (prev ? { ...prev, label: newLabel } : prev))
+
+    try {
+      await updateShoppingList(list.id, { label: newLabel }, spaceId)
+    } catch (e) {
+      if (handleConflict(e)) return
+      setList((prev) => (prev ? { ...prev, label: prevLabel } : prev))
+    }
+  }
+
+  async function handleShareToSpace(targetSpaceId: string | null) {
+    if (!list) return
+    setSharingLoading(true)
+    try {
+      await createShoppingList(
+        {
+          name: list.name,
+          items: list.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            purchased: item.purchased,
+            categoryId: item.category?.id,
+            note: item.note ?? undefined,
+            position: item.position,
+          })),
+        },
+        targetSpaceId ?? undefined,
+      )
+      setSharingOpen(false)
+      toast.success(t("shareSuccess"))
+    } catch {
+      toast.error(t("shareError"))
+    } finally {
+      setSharingLoading(false)
+    }
+  }
+
+  const showShareButton = spaces.length > 0 || !!spaceId
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <div className="mb-6">
@@ -309,7 +380,9 @@ export function ShoppingListDetail({ listId }: Props) {
               }
             })}
             createdAt={t("createdAt", { date: formatDate(list.createdAt, locale) })}
-            defaultOpen
+            label={list.label}
+            onEditLabel={handleEditLabel}
+            labelPlaceholder={t("labelPlaceholder")}
             onToggleItem={toggleItem}
             onReorderItems={reorderItems}
             onEditTitle={handleEditTitle}
@@ -330,10 +403,52 @@ export function ShoppingListDetail({ listId }: Props) {
             onSmartGroup={handleSmartGroup}
             smartGroupLoading={smartGrouping}
             smartGroupLabel={t("smartGroup")}
+            onShareToSpace={showShareButton ? () => setSharingOpen(true) : undefined}
+            shareToSpaceLabel={t("shareToSpace")}
+            isPinned={list.isPinned}
+            onTogglePin={handleTogglePin}
+            pinLabel={t("pin")}
             onDelete={handleDeleteList}
           />
         </>
       )}
+
+      <Dialog open={sharingOpen} onOpenChange={setSharingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-4" />
+              {t("shareToSpaceTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {spaceId && (
+              <Button
+                variant="outline"
+                className="justify-start gap-2"
+                disabled={sharingLoading}
+                onClick={() => handleShareToSpace(null)}
+              >
+                <User className="size-4" />
+                {t("myLists")}
+              </Button>
+            )}
+            {spaces
+              .filter((s) => s.id !== spaceId)
+              .map((space) => (
+                <Button
+                  key={space.id}
+                  variant="outline"
+                  className="justify-start gap-2"
+                  disabled={sharingLoading}
+                  onClick={() => handleShareToSpace(space.id)}
+                >
+                  {space.name}
+                </Button>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
