@@ -49,14 +49,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   getSavedRecipe,
   createShoppingList,
   deleteSavedRecipe,
+  getCategories,
   getMealPlan,
   updateMealPlan,
   updateRecipe,
+  updateRecipeIngredient,
+  deleteRecipeIngredient,
 } from "@/lib/api"
-import { UNITS, type SavedRecipeResponse } from "@/lib/types"
+import {
+  UNITS,
+  type Category,
+  type RecipeIngredientResponse,
+  type SavedRecipeResponse,
+  type UpdateRecipeIngredientRequest,
+} from "@/lib/types"
+import { NONE_CATEGORY } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useCategories } from "@/hooks/use-categories"
 
@@ -109,6 +127,17 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const [createListDialogOpen, setCreateListDialogOpen] = useState(false)
   const [listName, setListName] = useState("")
 
+  // Ingredient editing state
+  const [categories, setCategories] = useState<Category[]>([])
+  const [editingIngId, setEditingIngId] = useState<string | null>(null)
+  const [ingName, setIngName] = useState("")
+  const [ingQuantity, setIngQuantity] = useState("")
+  const [ingUnit, setIngUnit] = useState("pcs")
+  const [ingCategoryId, setIngCategoryId] = useState(NONE_CATEGORY)
+  const [ingNote, setIngNote] = useState("")
+  const [savingIngredient, setSavingIngredient] = useState(false)
+  const [deletingIngId, setDeletingIngId] = useState<string | null>(null)
+
   const fetchRecipe = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
@@ -132,6 +161,89 @@ export function SavedRecipeDetail({ recipeId }: Props) {
       ? tList(`units.${unit}`)
       : unit
     return label ? `${quantity} ${label}` : `${quantity}`
+  }
+
+  const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
+  const categoryOptions = categories.map((c) => ({
+    value: c.id,
+    label: localizeCategoryName(c),
+    icon: c.icon,
+  }))
+
+  // --- Ingredient editing handlers ---
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {})
+  }, [])
+
+  function resetIngForm() {
+    setIngName("")
+    setIngQuantity("")
+    setIngUnit("pcs")
+    setIngCategoryId(NONE_CATEGORY)
+    setIngNote("")
+    setEditingIngId(null)
+  }
+
+  function startEditIngredient(ing: RecipeIngredientResponse) {
+    setEditingIngId(ing.id)
+    setIngName(ing.name)
+    setIngQuantity(ing.quantity ? String(ing.quantity) : "")
+    setIngUnit(ing.unit || "pcs")
+    setIngCategoryId(ing.category?.id ?? NONE_CATEGORY)
+    setIngNote(ing.note ?? "")
+  }
+
+  async function handleSaveIngredient() {
+    if (!recipe || !editingIngId) return
+    const existing = recipe.ingredients.find((i) => i.id === editingIngId)
+    if (!existing) return
+
+    const data: UpdateRecipeIngredientRequest = {}
+    const trimmedName = ingName.trim()
+    if (trimmedName && trimmedName !== existing.name) data.name = trimmedName
+    const qty = ingQuantity ? Number(ingQuantity) : 0
+    if (qty !== existing.quantity) data.quantity = qty
+    const unit = ingUnit || "pcs"
+    if (unit !== existing.unit) data.unit = unit
+    const catId = ingCategoryId === NONE_CATEGORY ? null : ingCategoryId
+    if (catId !== (existing.category?.id ?? null)) data.categoryId = catId
+    const note = ingNote.trim() || null
+    if (note !== existing.note) data.note = note
+
+    if (Object.keys(data).length === 0) {
+      resetIngForm()
+      return
+    }
+
+    setSavingIngredient(true)
+    try {
+      await updateRecipeIngredient(recipeId, editingIngId, data)
+      resetIngForm()
+      const fresh = await getSavedRecipe(recipeId)
+      setRecipe(fresh)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("unexpectedError")
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setSavingIngredient(false)
+    }
+  }
+
+  async function handleDeleteIngredient(ingredientId: string) {
+    if (!recipe) return
+    setDeletingIngId(ingredientId)
+    try {
+      await deleteRecipeIngredient(recipeId, ingredientId)
+      if (editingIngId === ingredientId) resetIngForm()
+      const fresh = await getSavedRecipe(recipeId)
+      setRecipe(fresh)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("unexpectedError")
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setDeletingIngId(null)
+    }
   }
 
   // --- Recipe editing handlers ---
@@ -394,6 +506,17 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 )}
               </CardContent>
             </Card>
+            {!editingText && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={startEditText}
+                disabled={saving}
+              >
+                <Pencil className="size-4" />
+                {t("editRecipe")}
+              </Button>
+            )}
 
             {/* Ingredients card */}
             <Card>
@@ -406,60 +529,159 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Ingredients list */}
                 {recipe.ingredients.length > 0 ? (
-                  <>
-                    <div className="divide-y">
-                      {recipe.ingredients.map((ing) => (
-                        <div key={ing.id} className="space-y-1 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="min-w-0 flex-1 font-medium truncate">
-                              {ing.name}
-                            </span>
-                            <Badge variant="secondary" className="shrink-0 tabular-nums">
-                              {formatQty(ing.quantity, ing.unit)}
-                            </Badge>
-                            {ing.category && (
-                              <Badge variant="outline" className="shrink-0">
-                                {ing.category.icon ? `${ing.category.icon} ` : ""}
-                                {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
-                              </Badge>
+                  <div className="divide-y">
+                    {recipe.ingredients.map((ing) =>
+                      editingIngId === ing.id ? (
+                        <form
+                          key={ing.id}
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            handleSaveIngredient()
+                          }}
+                          className="space-y-2 rounded-lg border bg-muted/30 p-3 my-1"
+                        >
+                          <Input
+                            value={ingName}
+                            onChange={(e) => setIngName(e.target.value)}
+                            placeholder={t("ingredientNamePlaceholder")}
+                            autoFocus
+                          />
+                          <div className="flex gap-1.5">
+                            <Input
+                              type="number"
+                              value={ingQuantity}
+                              onChange={(e) => setIngQuantity(e.target.value)}
+                              placeholder={tList("qtyPlaceholder")}
+                              min={0}
+                              step="any"
+                              className="w-16 text-sm"
+                            />
+                            <Select value={ingUnit} onValueChange={setIngUnit}>
+                              <SelectTrigger className="w-20 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  {unitOptions.map((u) => (
+                                    <SelectItem key={u.value} value={u.value}>
+                                      {u.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                            {categoryOptions.length > 0 && (
+                              <Select value={ingCategoryId} onValueChange={setIngCategoryId}>
+                                <SelectTrigger className="flex-1 text-sm">
+                                  <SelectValue placeholder={t("categoryPlaceholder")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectItem value={NONE_CATEGORY}>—</SelectItem>
+                                    {categoryOptions.map((c) => (
+                                      <SelectItem key={c.value} value={c.value}>
+                                        {c.icon ? `${c.icon} ${c.label}` : c.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
                             )}
                           </div>
+                          <Input
+                            value={ingNote}
+                            onChange={(e) => setIngNote(e.target.value)}
+                            placeholder={t("notePlaceholder")}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={resetIngForm}
+                              disabled={savingIngredient}
+                            >
+                              {t("editCancel")}
+                            </Button>
+                            <Button
+                              type="submit"
+                              size="sm"
+                              className="flex-1"
+                              disabled={!ingName.trim() || savingIngredient}
+                            >
+                              {savingIngredient && <Loader2 className="size-4 animate-spin" />}
+                              {t("editSave")}
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div key={ing.id}>
+                          <div className="flex w-full items-center gap-2 py-3">
+                            <span className="flex flex-1 min-w-0">
+                              <span className="font-medium truncate">{ing.name}</span>
+                            </span>
+                            <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5">
+                              {ing.category && (
+                                <Badge variant="outline" className="text-[11px]">
+                                  {ing.category.icon ? `${ing.category.icon} ` : ""}
+                                  {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                                </Badge>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <Badge variant="secondary" className="tabular-nums">
+                                  {formatQty(ing.quantity, ing.unit)}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => startEditIngredient(ing)}
+                                  disabled={editingIngId !== null || deletingIngId !== null}
+                                  className="text-muted-foreground/40 hover:text-muted-foreground"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDeleteIngredient(ing.id)}
+                                  disabled={editingIngId !== null || deletingIngId !== null}
+                                  className="text-destructive/60 hover:text-destructive"
+                                >
+                                  {deletingIngId === ing.id ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="size-3.5" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                           {ing.note && (
-                            <p className="text-xs text-muted-foreground leading-snug">
+                            <p className="pb-2 px-1 text-xs text-muted-foreground leading-snug">
                               {ing.note}
                             </p>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </>
+                      )
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     {t("noIngredients")}
                   </p>
                 )}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setPlanPickerOpen(true)}
-                  >
-                    <ClipboardList className="size-4" />
-                    {tPlans("addToMealPlan")}
-                  </Button>
-                  {!editingText && (
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={startEditText}
-                      disabled={saving}
-                    >
-                      <Pencil className="size-4" />
-                      {t("editRecipe")}
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setPlanPickerOpen(true)}
+                >
+                  <ClipboardList className="size-4" />
+                  {tPlans("addToMealPlan")}
+                </Button>
                 {recipe.ingredients.length > 0 && (
                   <>
                     <Button

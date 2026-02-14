@@ -7,6 +7,8 @@ import type {
   SavedRecipeResponse,
   SavedRecipeListItem,
   UpdateRecipeRequest,
+  UpdateRecipeIngredientRequest,
+  RecipeIngredientResponse,
   PaginatedResponse,
   PaginationParams,
 } from "@/lib/types"
@@ -102,6 +104,20 @@ export function deleteSavedRecipe(id: string) {
   return request<void>(`/recipes/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
+}
+
+export function updateRecipeIngredient(recipeId: string, ingredientId: string, data: UpdateRecipeIngredientRequest) {
+  return request<RecipeIngredientResponse>(
+    `/recipes/${encodeURIComponent(recipeId)}/ingredients/${encodeURIComponent(ingredientId)}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  )
+}
+
+export function deleteRecipeIngredient(recipeId: string, ingredientId: string) {
+  return request<void>(
+    `/recipes/${encodeURIComponent(recipeId)}/ingredients/${encodeURIComponent(ingredientId)}`,
+    { method: "DELETE" },
+  )
 }
 
 // Streaming variants

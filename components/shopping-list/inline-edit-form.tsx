@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Check, GripVertical, Trash2, X } from "lucide-react"
+import { useState } from "react"
+import { Check, GripVertical, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -20,7 +20,6 @@ export function InlineEditForm({
   sortable,
   onSave,
   onCancel,
-  onDelete,
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
@@ -30,7 +29,6 @@ export function InlineEditForm({
   sortable: boolean
   onSave: (data: ItemData) => void
   onCancel: () => void
-  onDelete?: () => void
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
@@ -41,7 +39,6 @@ export function InlineEditForm({
   const [editUnit, setEditUnit] = useState(item.rawUnit ?? "pcs")
   const [editCategoryId, setEditCategoryId] = useState(item.rawCategoryId ?? NONE_CATEGORY)
   const [editNote, setEditNote] = useState(item.note ?? "")
-  const nameInputRef = useRef<HTMLInputElement>(null)
 
   function handleSave() {
     const trimmed = editName.trim()
@@ -66,97 +63,90 @@ export function InlineEditForm({
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1.5">
-      {sortable && (
-        <span className="shrink-0 text-muted-foreground/20">
-          <GripVertical className="size-4" />
-        </span>
-      )}
-      <Input
-        ref={nameInputRef}
-        autoFocus
-        value={editName}
-        onChange={(e) => setEditName(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="min-w-0 flex-[1_1_8rem] h-7 text-sm"
-      />
-      <Input
-        type="number"
-        value={editQuantity}
-        onChange={(e) => setEditQuantity(e.target.value)}
-        onKeyDown={handleKeyDown}
-        min={0}
-        step="any"
-        className="w-16 h-7 text-sm"
-      />
-      {unitOptions && (
-        <Select value={editUnit} onValueChange={setEditUnit}>
-          <SelectTrigger className="w-20 h-7 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {unitOptions.map((u) => (
-                <SelectItem key={u.value} value={u.value}>
-                  {u.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )}
-      {categoryOptions && (
-        <Select value={editCategoryId} onValueChange={setEditCategoryId}>
-          <SelectTrigger className="w-28 h-7 text-sm">
-            <SelectValue placeholder={categoryPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={NONE_CATEGORY}>—</SelectItem>
-              {categoryOptions.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.icon ? `${c.icon} ${c.label}` : c.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )}
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        {sortable && (
+          <span className="shrink-0 self-center text-muted-foreground/20">
+            <GripVertical className="size-4" />
+          </span>
+        )}
+        <Input
+          autoFocus
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="flex-1 h-7 text-sm"
+        />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={handleSave}
+            disabled={!editName.trim()}
+            className="text-primary hover:text-primary"
+          >
+            <Check className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCancel}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          value={editQuantity}
+          onChange={(e) => setEditQuantity(e.target.value)}
+          onKeyDown={handleKeyDown}
+          min={0}
+          step="any"
+          className="w-16 h-7 text-sm"
+        />
+        {unitOptions && (
+          <Select value={editUnit} onValueChange={setEditUnit}>
+            <SelectTrigger className="w-20 h-7 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {unitOptions.map((u) => (
+                  <SelectItem key={u.value} value={u.value}>
+                    {u.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+        {categoryOptions && (
+          <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+            <SelectTrigger className="flex-1 h-7 text-sm">
+              <SelectValue placeholder={categoryPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={NONE_CATEGORY}>—</SelectItem>
+                {categoryOptions.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.icon ? `${c.icon} ${c.label}` : c.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
       <Input
         value={editNote}
         onChange={(e) => setEditNote(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={notePlaceholder}
-        className="min-w-0 flex-[1_1_8rem] h-7 text-sm"
+        className="h-7 text-sm"
       />
-      <div className="flex items-center gap-1.5 ml-auto">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleSave}
-          disabled={!editName.trim()}
-          className="text-primary hover:text-primary"
-        >
-          <Check className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onCancel}
-        >
-          <X className="size-4" />
-        </Button>
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onDelete}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        )}
-      </div>
     </div>
   )
 }

@@ -129,3 +129,11 @@ export interface UpdateRecipeRequest {
   text?: string
   ingredients?: RecipeIngredientInput[]
 }
+
+export interface UpdateRecipeIngredientRequest {
+  name?: string
+  quantity?: number
+  unit?: string
+  categoryId?: string | null
+  note?: string | null
+}

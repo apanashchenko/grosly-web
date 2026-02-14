@@ -56,6 +56,7 @@
     "ingredientsTitle": "Інгредієнти",
     "ingredientsFound": "{count, plural, one {# інгредієнт знайдено} few {# інгредієнти знайдено} many {# інгредієнтів знайдено} other {# інгредієнтів знайдено}}",
     "categoryPlaceholder": "Категорія",
+    "notePlaceholder": "Нотатка (необов'язково)",
     "listNamePlaceholder": "Назва списку (необовʼязково)",
     "createShoppingList": "Створити список покупок",
     "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
@@ -73,6 +74,7 @@
     "addItemsDescription": "Заповніть список і натисніть «Створити список»",
     "itemNamePlaceholder": "Назва товару",
     "addButton": "Додати",
+    "saveItemButton": "Зберегти",
     "qtyPlaceholder": "К-сть",
     "unitPlaceholder": "Од.",
     "notePlaceholder": "Примітка (необовʼязково)",
@@ -362,7 +364,12 @@
     "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
     "listNamePlaceholder": "Назва списку (необовʼязково)",
     "cancelButton": "Скасувати",
-    "editRecipe": "Редагувати"
+    "editRecipe": "Редагувати",
+    "editIngredients": "Редагувати",
+    "ingredientNamePlaceholder": "Назва інгредієнта",
+    "addIngredientButton": "Додати",
+    "categoryPlaceholder": "Категорія",
+    "notePlaceholder": "Нотатка (необов'язково)"
   },
   "Spaces": {
     "heading": "Коло",
@@ -507,7 +514,10 @@
     "extracting": "Витягування...",
     "ingredientNamePlaceholder": "Назва інгредієнта",
     "categoryPlaceholder": "Категорія",
+    "notePlaceholder": "Нотатка (необов'язково)",
+    "addButton": "Додати",
     "saveRecipe": "Зберегти рецепт",
+    "saving": "Збереження...",
     "addToMealPlan": "Додати",
     "cancelAddToMealPlan": "Скасувати",
     "unexpectedError": "Сталася неочікувана помилка."

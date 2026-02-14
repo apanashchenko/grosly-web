@@ -56,6 +56,7 @@
     "ingredientsTitle": "Ingredients",
     "ingredientsFound": "{count, plural, one {# ingredient found} other {# ingredients found}}",
     "categoryPlaceholder": "Category",
+    "notePlaceholder": "Note (optional)",
     "listNamePlaceholder": "List name (optional)",
     "createShoppingList": "Create Shopping List",
     "createListDescription": "Enter a name or leave empty for an automatic name.",
@@ -73,6 +74,7 @@
     "addItemsDescription": "Fill in items and click \"Create list\"",
     "itemNamePlaceholder": "Item name",
     "addButton": "Add",
+    "saveItemButton": "Save",
     "qtyPlaceholder": "Qty",
     "unitPlaceholder": "Unit",
     "notePlaceholder": "Note (optional)",
@@ -362,7 +364,12 @@
     "createListDescription": "Enter a name or leave empty for an automatic name.",
     "listNamePlaceholder": "List name (optional)",
     "cancelButton": "Cancel",
-    "editRecipe": "Edit"
+    "editRecipe": "Edit",
+    "editIngredients": "Edit",
+    "ingredientNamePlaceholder": "Ingredient name",
+    "addIngredientButton": "Add",
+    "categoryPlaceholder": "Category",
+    "notePlaceholder": "Note (optional)"
   },
   "Spaces": {
     "heading": "Spaces",
@@ -507,7 +514,10 @@
     "extracting": "Extracting...",
     "ingredientNamePlaceholder": "Ingredient name",
     "categoryPlaceholder": "Category",
+    "notePlaceholder": "Note (optional)",
+    "addButton": "Add",
     "saveRecipe": "Save Recipe",
+    "saving": "Saving...",
     "addToMealPlan": "Add",
     "cancelAddToMealPlan": "Cancel",
     "unexpectedError": "An unexpected error occurred."

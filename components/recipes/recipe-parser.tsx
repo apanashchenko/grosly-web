@@ -204,6 +204,12 @@ export function RecipeParser() {
     )
   }
 
+  function handleNoteChange(index: number, value: string) {
+    setIngredients((prev) =>
+      prev.map((ing, i) => (i === index ? { ...ing, note: value || null } : ing))
+    )
+  }
+
   function handleCategoryChange(index: number, value: string) {
     setIngredients((prev) =>
       prev.map((ing, i) => (i === index ? { ...ing, categoryId: value === NONE_CATEGORY ? null : value } : ing))
@@ -451,17 +457,18 @@ export function RecipeParser() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          className="shrink-0 text-destructive/60 hover:text-destructive"
                           onClick={() => handleDeleteIngredient(index)}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>
-                      {ingredient.note && (
-                        <p className="text-xs text-muted-foreground leading-snug">
-                          {ingredient.note}
-                        </p>
-                      )}
+                      <Input
+                        value={ingredient.note ?? ""}
+                        onChange={(e) => handleNoteChange(index, e.target.value)}
+                        placeholder={t("notePlaceholder")}
+                        className="h-7 text-sm"
+                      />
                       <div className="flex items-center gap-1.5">
                         <Input
                           type="number"

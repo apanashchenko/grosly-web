@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import {
   ChevronDown,
   LoaderCircle,
+  Pencil,
   Plus,
   Trash2,
   Bookmark,
@@ -19,7 +20,6 @@ import { NONE_CATEGORY } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { PageHeader } from "@/components/shared/page-header"
 import { Link } from "@/i18n/navigation"
-import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -73,9 +73,10 @@ export function ManualRecipeCreator({
   const [newQuantity, setNewQuantity] = useState("")
   const [newUnit, setNewUnit] = useState("pcs")
   const [newCategoryId, setNewCategoryId] = useState(NONE_CATEGORY)
+  const [newNote, setNewNote] = useState("")
+  const [isEditing, setIsEditing] = useState(false)
 
   // Save state
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeSaved, setRecipeSaved] = useState(false)
 
@@ -117,49 +118,46 @@ export function ManualRecipeCreator({
         quantity: newQuantity ? Number(newQuantity) : null,
         unit: newUnit || "pcs",
         localizedUnit: "",
-        note: null,
+        note: newNote.trim() || null,
         categoryId: newCategoryId === NONE_CATEGORY ? null : newCategoryId,
       },
     ])
+    resetForm()
+  }
+
+  function resetForm() {
     setNewName("")
     setNewQuantity("")
     setNewUnit("pcs")
     setNewCategoryId(NONE_CATEGORY)
+    setNewNote("")
+    setIsEditing(false)
   }
 
   function handleDeleteIngredient(index: number) {
     setIngredients((prev) => prev.filter((_, i) => i !== index))
   }
 
-  function handleQuantityChange(index: number, value: string) {
-    const num = value === "" ? null : Number(value)
-    if (value !== "" && isNaN(num!)) return
-    setIngredients((prev) =>
-      prev.map((ing, i) => (i === index ? { ...ing, quantity: num } : ing))
-    )
+  function handleEditIngredient(index: number) {
+    const ing = ingredients[index]
+    setNewName(ing.name)
+    setNewQuantity(ing.quantity !== null ? String(ing.quantity) : "")
+    setNewUnit(ing.unit || "pcs")
+    setNewCategoryId(ing.categoryId ?? NONE_CATEGORY)
+    setNewNote(ing.note ?? "")
+    setIsEditing(true)
+    handleDeleteIngredient(index)
   }
 
-  function handleUnitChange(index: number, value: string) {
-    setIngredients((prev) =>
-      prev.map((ing, i) => (i === index ? { ...ing, unit: value } : ing))
-    )
-  }
-
-  function handleCategoryChange(index: number, value: string) {
-    setIngredients((prev) =>
-      prev.map((ing, i) => (i === index ? { ...ing, categoryId: value === NONE_CATEGORY ? null : value } : ing))
-    )
-  }
-
-  async function handleSaveRecipe(opts: { title: string }) {
+  async function handleSaveRecipe() {
+    if (!canSave) return
     setSavingRecipe(true)
     try {
-      const fullText = recipeTitle.trim()
-        ? `${recipeTitle.trim()}\n\n${recipeText}`
-        : recipeText
+      const title = recipeTitle.trim()
+      const fullText = `${title}\n\n${recipeText}`
 
       await saveRecipe({
-        title: opts.title || recipeTitle.trim() || undefined,
+        title,
         source: "MANUAL",
         text: fullText,
         ...(ingredients.length > 0
@@ -169,12 +167,12 @@ export function ManualRecipeCreator({
                 quantity: ing.quantity ?? 0,
                 unit: ing.unit,
                 ...(ing.categoryId ? { categoryId: ing.categoryId } : {}),
+                ...(ing.note ? { note: ing.note } : {}),
               })),
             }
           : {}),
       })
       setRecipeSaved(true)
-      setSaveDialogOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : t("unexpectedError"))
     } finally {
@@ -182,7 +180,7 @@ export function ManualRecipeCreator({
     }
   }
 
-  const canSave = recipeText.trim().length >= 3 && !isOverLimit && ingredients.length > 0
+  const canSave = recipeTitle.trim().length > 0 && recipeText.trim().length >= 3 && !isOverLimit
   const canAddToMealPlan = canSave
 
   function handleAddToMealPlan() {
@@ -299,8 +297,9 @@ export function ManualRecipeCreator({
                       placeholder={t("ingredientNamePlaceholder")}
                       className="flex-1"
                     />
-                    <Button type="submit" size="icon" disabled={!newName.trim()}>
-                      <Plus />
+                    <Button type="submit" disabled={!newName.trim()}>
+                      {isEditing ? <Check /> : <Plus />}
+                      {isEditing ? tList("saveItemButton") : t("addButton")}
                     </Button>
                   </div>
                   <div className="flex gap-1.5">
@@ -345,73 +344,63 @@ export function ManualRecipeCreator({
                       </Select>
                     )}
                   </div>
+                  <Input
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder={t("notePlaceholder")}
+                    className="text-sm"
+                  />
                 </form>
 
                 {/* Ingredients list */}
                 {ingredients.length > 0 && (
                   <div className="divide-y">
-                    {ingredients.map((ingredient, index) => (
-                      <div key={index} className="space-y-1.5 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 font-medium truncate">
-                            {ingredient.name}
-                          </span>
+                    {ingredients.map((ingredient, index) => {
+                      const qty = ingredient.quantity !== null
+                        ? (ingredient.unit ? `${ingredient.quantity} ${tList(`units.${ingredient.unit}`)}` : `${ingredient.quantity}`)
+                        : null
+                      const cat = ingredient.categoryId
+                        ? categoryOptions.find((c) => c.value === ingredient.categoryId)
+                        : null
+                      return (
+                        <div key={index}>
+                          <div className="flex w-full items-center gap-2 py-3">
+                            <span className="flex flex-1 min-w-0">
+                              <span className="font-medium truncate">{ingredient.name}</span>
+                            </span>
+                            <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5">
+                              {cat && (
+                                <Badge variant="outline" className="text-[11px]">{cat.icon ? `${cat.icon} ${cat.label}` : cat.label}</Badge>
+                              )}
+                              <div className="flex items-center gap-1">
+                                {qty && <Badge variant="secondary">{qty}</Badge>}
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleEditIngredient(index)}
+                                  className="text-muted-foreground/40 hover:text-muted-foreground"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDeleteIngredient(index)}
+                                  className="text-destructive/60 hover:text-destructive"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                           {ingredient.note && (
-                            <Badge variant="outline" className="shrink-0">{ingredient.note}</Badge>
+                            <p className="pb-2 px-1 text-xs text-muted-foreground leading-snug">
+                              {ingredient.note}
+                            </p>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDeleteIngredient(index)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            type="number"
-                            value={ingredient.quantity ?? ""}
-                            onChange={(e) => handleQuantityChange(index, e.target.value)}
-                            min={0}
-                            step="any"
-                            className="w-16 h-7 text-sm"
-                          />
-                          <Select value={ingredient.unit} onValueChange={(v) => handleUnitChange(index, v)}>
-                            <SelectTrigger className="w-20 h-7 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {unitOptions.map((u) => (
-                                  <SelectItem key={u.value} value={u.value}>
-                                    {u.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={ingredient.categoryId ?? NONE_CATEGORY}
-                            onValueChange={(v) => handleCategoryChange(index, v)}
-                          >
-                            <SelectTrigger className="flex-1 h-7 text-sm">
-                              <SelectValue placeholder={t("categoryPlaceholder")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value={NONE_CATEGORY}>—</SelectItem>
-                                {categoryOptions.map((c) => (
-                                  <SelectItem key={c.value} value={c.value}>
-                                    {c.icon ? `${c.icon} ${c.label}` : c.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
@@ -456,23 +445,19 @@ export function ManualRecipeCreator({
                         </div>
                       ) : (
                         <Button
-                          onClick={() => setSaveDialogOpen(true)}
-                          disabled={!canSave}
+                          onClick={handleSaveRecipe}
+                          disabled={!canSave || savingRecipe}
                           className="w-full"
                           size="lg"
                         >
-                          <Bookmark />
-                          {t("saveRecipe")}
+                          {savingRecipe ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : (
+                            <Bookmark />
+                          )}
+                          {savingRecipe ? t("saving") : t("saveRecipe")}
                         </Button>
                       )}
-
-                      <SaveRecipeDialog
-                        open={saveDialogOpen}
-                        onOpenChange={setSaveDialogOpen}
-                        onSave={handleSaveRecipe}
-                        saving={savingRecipe}
-                        defaultTitle={recipeTitle.trim()}
-                      />
                     </>
                   )}
                 </div>

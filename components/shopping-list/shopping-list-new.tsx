@@ -3,10 +3,25 @@
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { Loader2, Plus, ShoppingCart, Trash2 } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable"
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
+import { Loader2, Plus, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -23,6 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/shared/page-header"
+import { SortableItem } from "./sortable-item"
+import type { ItemData } from "./types"
 import { useRouter } from "@/i18n/navigation"
 import { createShoppingList, getCategories } from "@/lib/api"
 import { UNITS, type Category, type ShoppingListItemRequest } from "@/lib/types"
@@ -35,6 +52,7 @@ interface PendingItem {
   quantity: number | null
   unit: string | null
   categoryId: string | null
+  note: string | null
 }
 
 let nextPendingId = 0
@@ -54,8 +72,22 @@ export function ShoppingListNew() {
   const [quantity, setQuantity] = useState("")
   const [unit, setUnit] = useState("")
   const [categoryId, setCategoryId] = useState(NONE_CATEGORY)
+  const [note, setNote] = useState("")
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setPendingItems((prev) => arrayMove(prev, active.id as number, over.id as number))
+    }
+  }
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -96,17 +128,44 @@ export function ShoppingListNew() {
         quantity: quantity ? Number(quantity) : null,
         unit: unit || null,
         categoryId: categoryId === NONE_CATEGORY ? null : categoryId,
+        note: note.trim() || null,
       },
     ])
     setName("")
     setQuantity("")
     setUnit("")
     setCategoryId(NONE_CATEGORY)
+    setNote("")
   }
 
   function removePendingItem(id: number) {
     setPendingItems((prev) => prev.filter((item) => item.id !== id))
   }
+
+  function savePendingItem(id: number, data: ItemData) {
+    setPendingItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              name: data.name,
+              quantity: data.quantity || null,
+              unit: data.unit || null,
+              categoryId: data.categoryId || null,
+              note: data.note || null,
+            }
+          : item
+      )
+    )
+    setEditingItemId(null)
+  }
+
+  const unitOptions = UNITS.map((u) => ({ value: u, label: t(`units.${u}`) }))
+  const categoryOptionsList = categories.map((c) => ({
+    value: c.id,
+    label: localizeCategoryName(c),
+    icon: c.icon,
+  }))
 
   async function handleCreateList() {
     if (pendingItems.length === 0) return
@@ -118,6 +177,7 @@ export function ShoppingListNew() {
         quantity: item.quantity ?? 0,
         unit: item.unit ?? "pcs",
         categoryId: item.categoryId || undefined,
+        note: item.note || undefined,
         position: i,
       }))
       await createShoppingList({
@@ -202,34 +262,54 @@ export function ShoppingListNew() {
                 </Select>
               )}
             </div>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={t("notePlaceholder")}
+            />
           </form>
 
           {pendingItems.length > 0 && (
-            <div className="divide-y">
-              {pendingItems.map((item) => {
-                const qty = formatPendingQty(item)
-                const catLabel = formatPendingCategory(item)
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 py-3"
-                  >
-                    <span className="flex flex-1 flex-wrap items-baseline gap-2">
-                      <span className="font-medium">{item.name}</span>
-                      {qty && <Badge variant="secondary">{qty}</Badge>}
-                      {catLabel && <Badge variant="outline">{catLabel}</Badge>}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => removePendingItem(item.id)}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={pendingItems.map((_, i) => i)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {pendingItems.map((item, index) => (
+                    <SortableItem
+                      key={item.id}
+                      item={{
+                        name: item.name,
+                        badge: formatPendingQty(item),
+                        noteBadge: formatPendingCategory(item),
+                        note: item.note,
+                        checked: false,
+                        rawQuantity: item.quantity ?? 0,
+                        rawUnit: item.unit ?? "pcs",
+                        rawCategoryId: item.categoryId ?? undefined,
+                      }}
+                      index={index}
+                      sortable
+                      editing={editingItemId === item.id}
+                      onStartEdit={() => setEditingItemId(item.id)}
+                      onSaveEdit={(data) => savePendingItem(item.id, data)}
+                      onCancelEdit={() => setEditingItemId(null)}
+                      onDeleteItem={() => removePendingItem(item.id)}
+                      unitOptions={unitOptions}
+                      categoryOptions={categoryOptionsList.length > 0 ? categoryOptionsList : undefined}
+                      categoryPlaceholder={t("categoryPlaceholder")}
+                      notePlaceholder={t("notePlaceholder")}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
 
           {error && (

@@ -59,70 +59,74 @@ export function AddItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 pt-3">
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder={placeholder}
-        className="min-w-0 flex-1 basis-32 h-7 text-sm"
-      />
-      <Input
-        type="number"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        placeholder={qtyPlaceholder}
-        min={0}
-        step="any"
-        className="w-16 h-7 text-sm"
-      />
-      {unitOptions && (
-        <Select value={unit} onValueChange={setUnit}>
-          <SelectTrigger className="w-20 h-7 text-sm">
-            <SelectValue placeholder={unitPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {unitOptions.map((u) => (
-                <SelectItem key={u.value} value={u.value}>
-                  {u.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )}
-      {categoryOptions && (
-        <Select value={categoryId} onValueChange={setCategoryId}>
-          <SelectTrigger className="min-w-0 flex-1 basis-28 h-7 text-sm">
-            <SelectValue placeholder={categoryPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={NONE_CATEGORY}>—</SelectItem>
-              {categoryOptions.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.icon ? `${c.icon} ${c.label}` : c.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-2 pt-3">
+      <div className="flex gap-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 h-7 text-sm"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="ghost"
+          disabled={!name.trim()}
+          className="text-primary hover:text-primary h-7 text-sm"
+        >
+          <Plus className="size-4" />
+        </Button>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          placeholder={qtyPlaceholder}
+          min={0}
+          step="any"
+          className="w-16 h-7 text-sm"
+        />
+        {unitOptions && (
+          <Select value={unit} onValueChange={setUnit}>
+            <SelectTrigger className="w-20 h-7 text-sm">
+              <SelectValue placeholder={unitPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {unitOptions.map((u) => (
+                  <SelectItem key={u.value} value={u.value}>
+                    {u.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+        {categoryOptions && (
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger className="flex-1 h-7 text-sm">
+              <SelectValue placeholder={categoryPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={NONE_CATEGORY}>—</SelectItem>
+                {categoryOptions.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.icon ? `${c.icon} ${c.label}` : c.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
       <Input
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder={notePlaceholder}
-        className="min-w-0 flex-1 basis-32 h-7 text-sm"
+        className="h-7 text-sm"
       />
-      <Button
-        type="submit"
-        variant="ghost"
-        size="icon-xs"
-        disabled={!name.trim()}
-        className="text-primary hover:text-primary"
-      >
-        <Plus className="size-4" />
-      </Button>
     </form>
   )
 }

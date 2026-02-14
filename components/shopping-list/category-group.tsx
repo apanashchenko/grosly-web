@@ -138,6 +138,7 @@ function CategoryGroup({
   const [open, setOpen] = useState(true)
   const sortable = !!onReorderItems
   const itemIds = group.items.map(({ originalIndex }) => originalIndex)
+  const allChecked = group.items.length > 0 && group.items.every(({ item }) => item.checked)
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -151,10 +152,16 @@ function CategoryGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 mb-1 px-1 group/cat"
+        className={cn(
+          "flex w-full items-center gap-2 mb-1 px-1 group/cat transition-opacity",
+          allChecked && "opacity-50"
+        )}
       >
         {group.icon && <span className="text-sm">{group.icon}</span>}
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className={cn(
+          "relative text-xs font-medium uppercase tracking-wide text-muted-foreground",
+          allChecked && "hand-strikethrough"
+        )}>
           {group.label}
         </span>
         <span className="text-xs text-muted-foreground/60">
@@ -179,7 +186,7 @@ function CategoryGroup({
             items={itemIds}
             strategy={verticalListSortingStrategy}
           >
-            <div className="divide-y">
+            <div className="space-y-2">
               {group.items.map(({ item, originalIndex }) => (
                 <SortableItem
                   key={item.id ?? originalIndex}

@@ -146,33 +146,13 @@ export function ShoppingListDetail({ listId }: Props) {
     if (!list) return
     const item = list.items[index]
     if (!item) return
-    const prevItem = { ...item }
-    const newCategory = data.categoryId
-      ? categories.find((c) => c.id === data.categoryId) ?? null
-      : null
-
-    setList((prev) =>
-      prev
-        ? {
-            ...prev,
-            items: prev.items.map((it, i) =>
-              i === index
-                ? { ...it, name: data.name, quantity: data.quantity, unit: data.unit, note: data.note ?? null, category: newCategory ? { id: newCategory.id, name: newCategory.name, icon: newCategory.icon } : null }
-                : it
-            ),
-          }
-        : prev
-    )
 
     try {
       await updateShoppingListItem(list.id, item.id, { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, note: data.note }, spaceId)
+      const fresh = await getShoppingList(listId, spaceId)
+      setList(fresh)
     } catch (e) {
       if (handleConflict(e)) return
-      setList((prev) =>
-        prev
-          ? { ...prev, items: prev.items.map((it, i) => (i === index ? prevItem : it)) }
-          : prev
-      )
     }
   }
 
@@ -180,17 +160,13 @@ export function ShoppingListDetail({ listId }: Props) {
     if (!list) return
     const item = list.items[index]
     if (!item) return
-    const prevItems = [...list.items]
-
-    setList((prev) =>
-      prev ? { ...prev, items: prev.items.filter((_, i) => i !== index) } : prev
-    )
 
     try {
       await deleteShoppingListItem(list.id, item.id, spaceId)
+      const fresh = await getShoppingList(listId, spaceId)
+      setList(fresh)
     } catch (e) {
       if (handleConflict(e)) return
-      setList((prev) => (prev ? { ...prev, items: prevItems } : prev))
     }
   }
 

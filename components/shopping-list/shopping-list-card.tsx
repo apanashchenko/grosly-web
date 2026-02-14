@@ -299,7 +299,7 @@ export function ShoppingListCard({
                 items={itemIds}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="divide-y">
+                <div className="space-y-2">
                   {items.map((item, index) => (
                     <SortableItem
                       key={item.id ?? index}
