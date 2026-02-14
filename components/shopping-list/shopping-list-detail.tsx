@@ -142,7 +142,7 @@ export function ShoppingListDetail({ listId }: Props) {
     }
   }
 
-  async function handleEditItem(index: number, data: { name: string; quantity: number; unit: string; categoryId?: string }) {
+  async function handleEditItem(index: number, data: { name: string; quantity: number; unit: string; categoryId?: string; note?: string }) {
     if (!list) return
     const item = list.items[index]
     if (!item) return
@@ -157,7 +157,7 @@ export function ShoppingListDetail({ listId }: Props) {
             ...prev,
             items: prev.items.map((it, i) =>
               i === index
-                ? { ...it, name: data.name, quantity: data.quantity, unit: data.unit, category: newCategory ? { id: newCategory.id, name: newCategory.name, icon: newCategory.icon } : null }
+                ? { ...it, name: data.name, quantity: data.quantity, unit: data.unit, note: data.note ?? null, category: newCategory ? { id: newCategory.id, name: newCategory.name, icon: newCategory.icon } : null }
                 : it
             ),
           }
@@ -165,7 +165,7 @@ export function ShoppingListDetail({ listId }: Props) {
     )
 
     try {
-      await updateShoppingListItem(list.id, item.id, { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId }, spaceId)
+      await updateShoppingListItem(list.id, item.id, { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, note: data.note }, spaceId)
     } catch (e) {
       if (handleConflict(e)) return
       setList((prev) =>
@@ -194,7 +194,7 @@ export function ShoppingListDetail({ listId }: Props) {
     }
   }
 
-  async function handleAddItem(data: { name: string; quantity: number; unit: string; categoryId?: string }) {
+  async function handleAddItem(data: { name: string; quantity: number; unit: string; categoryId?: string; note?: string }) {
     if (!list) return
     const newPosition = list.items.length
     const tempId = `temp-${Date.now()}`
@@ -207,6 +207,7 @@ export function ShoppingListDetail({ listId }: Props) {
       name: data.name,
       quantity: data.quantity,
       unit: data.unit,
+      note: data.note ?? null,
       purchased: false,
       category: tempCategory ? { id: tempCategory.id, name: tempCategory.name, icon: tempCategory.icon } : null,
       position: newPosition,
@@ -217,7 +218,7 @@ export function ShoppingListDetail({ listId }: Props) {
 
     try {
       const updatedList = await addShoppingListItems(list.id, [
-        { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, position: newPosition },
+        { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, note: data.note, position: newPosition },
       ], spaceId)
       setList(updatedList)
     } catch (e) {
@@ -323,6 +324,7 @@ export function ShoppingListDetail({ listId }: Props) {
                 noteBadge: item.category
                   ? `${item.category.icon ?? ""} ${fullCat ? localizeCategoryName(fullCat) : item.category.name}`.trim()
                   : null,
+                note: item.note,
                 checked: item.purchased,
                 rawQuantity: item.quantity,
                 rawUnit: item.unit,
@@ -344,6 +346,7 @@ export function ShoppingListDetail({ listId }: Props) {
             addItemPlaceholder={t("itemNamePlaceholder")}
             qtyPlaceholder={t("qtyPlaceholder")}
             unitPlaceholder={t("unitPlaceholder")}
+            notePlaceholder={t("notePlaceholder")}
             grouped={list.groupedByCategories}
             onToggleGrouped={toggleGrouped}
             groupByLabel={t("groupByCategory")}

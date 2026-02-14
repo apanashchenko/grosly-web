@@ -8,10 +8,11 @@ import {
   Check,
   Sparkles,
   Bookmark,
+  ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SingleRecipeResponse } from "@/lib/types"
-import { generateSingleRecipe, streamSingleRecipe, saveRecipe } from "@/lib/api"
+import { generateSingleRecipe, streamSingleRecipe, saveRecipe, createShoppingList } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
 import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
@@ -28,6 +29,15 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RecipeCard } from "@/components/recipes/recipe-card"
 
@@ -44,6 +54,10 @@ export function RecipeGenerator() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeSaved, setRecipeSaved] = useState(false)
+  const [createListDialogOpen, setCreateListDialogOpen] = useState(false)
+  const [listName, setListName] = useState("")
+  const [savingList, setSavingList] = useState(false)
+  const [savedSuccess, setSavedSuccess] = useState(false)
 
   const stream = useStream<SingleRecipeResponse>()
   const { abort } = stream
@@ -82,8 +96,34 @@ export function RecipeGenerator() {
     }
   }
 
+  async function handleCreateList() {
+    if (!stream.result) return
+    const recipe = stream.result.recipe
+
+    setSavingList(true)
+    try {
+      await createShoppingList({
+        ...(listName.trim() ? { name: listName.trim() } : {}),
+        items: recipe.ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit?.canonical ?? "",
+          ...(ing.categoryId && { categoryId: ing.categoryId }),
+        })),
+      })
+      setSavedSuccess(true)
+      setCreateListDialogOpen(false)
+    } catch {
+      // error handled silently
+    } finally {
+      setSavingList(false)
+    }
+  }
+
   function handleGenerate() {
     setRecipeSaved(false)
+    setSavedSuccess(false)
+    setListName("")
     stream.start(
       (callbacks, signal) =>
         streamSingleRecipe(query, locale, callbacks, signal),
@@ -191,23 +231,49 @@ export function RecipeGenerator() {
               categoryMap={categoryMap}
               footer={
                 stream.result ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-3 w-full">
                     {recipeSaved ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/recipes">
-                          <Check className="size-4" />
-                          {tSave("recipeSaved")}
-                        </Link>
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Check className="size-4 text-primary" />
+                        <Button variant="link" size="sm" asChild>
+                          <Link href="/recipes">
+                            <Bookmark className="size-4" />
+                            {tSave("viewSavedRecipes")}
+                          </Link>
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         variant="outline"
                         onClick={() => setSaveDialogOpen(true)}
+                        className="w-full"
                       >
                         <Bookmark className="size-4" />
                         {tSave("saveRecipe")}
                       </Button>
                     )}
+
+                    <div className="border-t pt-3">
+                      {savedSuccess ? (
+                        <div className="flex items-center gap-2">
+                          <Check className="size-4 text-primary" />
+                          <Button variant="link" size="sm" asChild>
+                            <Link href="/shopping-list">
+                              <ShoppingCart className="size-4" />
+                              {t("viewShoppingLists")}
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => setCreateListDialogOpen(true)}
+                          className="w-full"
+                        >
+                          <ShoppingCart className="size-4" />
+                          {t("createShoppingList")}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ) : undefined
               }
@@ -232,6 +298,40 @@ export function RecipeGenerator() {
         saving={savingRecipe}
         defaultTitle={stream.result?.recipe.dishName ?? ""}
       />
+
+      <Dialog open={createListDialogOpen} onOpenChange={setCreateListDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("createShoppingList")}</DialogTitle>
+            <DialogDescription>{t("createListDescription")}</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+            placeholder={t("listNamePlaceholder")}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateListDialogOpen(false)}
+              disabled={savingList}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={handleCreateList}
+              disabled={savingList}
+            >
+              {savingList ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <ShoppingCart className="size-4" />
+              )}
+              {savingList ? t("saving") : t("createShoppingList")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

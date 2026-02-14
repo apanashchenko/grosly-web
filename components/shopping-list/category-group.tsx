@@ -37,6 +37,7 @@ interface GroupedItemsProps {
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
+  notePlaceholder?: string
   uncategorizedLabel: string
   sensors: ReturnType<typeof useSensors>
 }
@@ -52,6 +53,7 @@ export function GroupedItems({
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
+  notePlaceholder,
   uncategorizedLabel,
   sensors,
 }: GroupedItemsProps) {
@@ -98,6 +100,7 @@ export function GroupedItems({
           unitOptions={unitOptions}
           categoryOptions={categoryOptions}
           categoryPlaceholder={categoryPlaceholder}
+          notePlaceholder={notePlaceholder}
           sensors={sensors}
         />
       ))}
@@ -116,6 +119,7 @@ function CategoryGroup({
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
+  notePlaceholder,
   sensors,
 }: {
   group: ItemGroup
@@ -128,6 +132,7 @@ function CategoryGroup({
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
+  notePlaceholder?: string
   sensors: ReturnType<typeof useSensors>
 }) {
   const [open, setOpen] = useState(true)
@@ -196,6 +201,7 @@ function CategoryGroup({
                   unitOptions={unitOptions}
                   categoryOptions={categoryOptions}
                   categoryPlaceholder={categoryPlaceholder}
+                  notePlaceholder={notePlaceholder}
                 />
               ))}
             </div>

@@ -43,12 +43,23 @@
     "placeholder": "Borscht\n\nIngredients:\n- beets 2 pcs\n- potatoes 3 pcs\n- meat 500 g\n- salt, pepper to taste",
     "parsing": "Parsing...",
     "parseButton": "Parse Ingredients",
+    "tabText": "Text",
+    "tabImage": "Photo",
+    "imageUploadTitle": "Recipe Photo",
+    "imageUploadDescription": "Upload a photo or screenshot of a recipe",
+    "imageDropzone": "Click or drag an image here",
+    "imageFormats": "JPEG, PNG, WebP — up to 10 MB",
+    "imageSelected": "Selected: {name}",
+    "changeImage": "Change",
+    "parseImageButton": "Recognize Ingredients",
     "unexpectedError": "An unexpected error occurred.",
     "ingredientsTitle": "Ingredients",
     "ingredientsFound": "{count, plural, one {# ingredient found} other {# ingredients found}}",
     "categoryPlaceholder": "Category",
     "listNamePlaceholder": "List name (optional)",
     "createShoppingList": "Create Shopping List",
+    "createListDescription": "Enter a name or leave empty for an automatic name.",
+    "cancel": "Cancel",
     "saving": "Saving...",
     "savedSuccess": "List created",
     "viewShoppingLists": "View shopping lists"
@@ -126,7 +137,11 @@
     "viewShoppingLists": "View Shopping Lists",
     "noRecipes": "No recipe generated. Try a different query.",
     "instructionsLabel": "Instructions",
-    "streamingMessage": "We're generating your recipe..."
+    "streamingMessage": "We're generating your recipe...",
+    "createShoppingList": "Create Shopping List",
+    "createListDescription": "Enter a name or leave empty for an automatic name.",
+    "listNamePlaceholder": "List name (optional)",
+    "cancel": "Cancel"
   },
   "MealPlanner": {
     "heading": "Meal Plan",
@@ -317,6 +332,7 @@
     "unexpectedError": "An unexpected error occurred.",
     "source": {
       "PARSED": "Parsed",
+      "PARSED_IMAGE": "From Photo",
       "GENERATED": "Generated",
       "SUGGESTED": "Suggested",
       "MANUAL": "Manual",
@@ -343,6 +359,9 @@
     "ingredientsCount": "{count, plural, one {# ingredient} other {# ingredients}}",
     "noIngredients": "No ingredients saved for this recipe.",
     "createShoppingList": "Create shopping list",
+    "createListDescription": "Enter a name or leave empty for an automatic name.",
+    "listNamePlaceholder": "List name (optional)",
+    "cancelButton": "Cancel",
     "editRecipe": "Edit"
   },
   "Spaces": {
@@ -427,11 +446,15 @@
     "emptyRecipes": "No recipes in this plan yet",
     "viewShoppingList": "View Shopping List",
     "createShoppingList": "Create Shopping List",
+    "createListDescription": "Enter a name or leave empty for an automatic name.",
+    "listNamePlaceholder": "List name (optional)",
+    "cancelButton": "Cancel",
     "creatingShoppingList": "Creating...",
     "shoppingListCreated": "Shopping list created",
     "source": {
       "GENERATED": "Generated",
       "PARSED": "Parsed",
+      "PARSED_IMAGE": "From Photo",
       "SUGGESTED": "Suggested",
       "MEAL_PLAN": "Meal Plan",
       "MANUAL": "Manual"

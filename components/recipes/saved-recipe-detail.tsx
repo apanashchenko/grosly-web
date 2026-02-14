@@ -30,6 +30,14 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { MealPlanPickerDialog } from "@/components/meal-plans/meal-plan-picker-dialog"
 import { Link, useRouter } from "@/i18n/navigation"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -64,8 +72,11 @@ function formatDate(iso: string, locale: string) {
 
 const SOURCE_STYLES: Record<string, string> = {
   PARSED: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+  PARSED_IMAGE: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
   GENERATED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   SUGGESTED: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
+  MANUAL: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
+  MEAL_PLAN: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
 }
 
 interface Props {
@@ -95,6 +106,8 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const [editText, setEditText] = useState("")
   const [saving, setSaving] = useState(false)
   const [creatingList, setCreatingList] = useState(false)
+  const [createListDialogOpen, setCreateListDialogOpen] = useState(false)
+  const [listName, setListName] = useState("")
 
   const fetchRecipe = useCallback(async () => {
     setLoading(true)
@@ -182,7 +195,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     setCreatingList(true)
     try {
       const newList = await createShoppingList({
-        name: recipe.title,
+        ...(listName.trim() ? { name: listName.trim() } : { name: recipe.title }),
         items: recipe.ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,
@@ -190,6 +203,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
           ...(ing.category?.id ? { categoryId: ing.category.id } : {}),
         })),
       })
+      setCreateListDialogOpen(false)
       router.push(`/shopping-list/${newList.id}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("unexpectedError")
@@ -396,18 +410,25 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                   <>
                     <div className="divide-y">
                       {recipe.ingredients.map((ing) => (
-                        <div key={ing.id} className="flex items-center gap-2 py-2.5">
-                          <span className="min-w-0 flex-1 font-medium truncate">
-                            {ing.name}
-                          </span>
-                          <Badge variant="secondary" className="shrink-0 tabular-nums">
-                            {formatQty(ing.quantity, ing.unit)}
-                          </Badge>
-                          {ing.category && (
-                            <Badge variant="outline" className="shrink-0">
-                              {ing.category.icon ? `${ing.category.icon} ` : ""}
-                              {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                        <div key={ing.id} className="space-y-1 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 font-medium truncate">
+                              {ing.name}
+                            </span>
+                            <Badge variant="secondary" className="shrink-0 tabular-nums">
+                              {formatQty(ing.quantity, ing.unit)}
                             </Badge>
+                            {ing.category && (
+                              <Badge variant="outline" className="shrink-0">
+                                {ing.category.icon ? `${ing.category.icon} ` : ""}
+                                {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                              </Badge>
+                            )}
+                          </div>
+                          {ing.note && (
+                            <p className="text-xs text-muted-foreground leading-snug">
+                              {ing.note}
+                            </p>
                           )}
                         </div>
                       ))}
@@ -440,19 +461,52 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                   )}
                 </div>
                 {recipe.ingredients.length > 0 && (
-                  <Button
-                    onClick={handleCreateShoppingList}
-                    disabled={creatingList}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {creatingList ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setListName(recipe.title)
+                        setCreateListDialogOpen(true)
+                      }}
+                      className="w-full"
+                      size="lg"
+                    >
                       <ShoppingCart className="size-4" />
-                    )}
-                    {t("createShoppingList")}
-                  </Button>
+                      {t("createShoppingList")}
+                    </Button>
+                    <Dialog open={createListDialogOpen} onOpenChange={setCreateListDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{t("createShoppingList")}</DialogTitle>
+                          <DialogDescription>{t("createListDescription")}</DialogDescription>
+                        </DialogHeader>
+                        <Input
+                          value={listName}
+                          onChange={(e) => setListName(e.target.value)}
+                          placeholder={t("listNamePlaceholder")}
+                        />
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setCreateListDialogOpen(false)}
+                            disabled={creatingList}
+                          >
+                            {t("cancelButton")}
+                          </Button>
+                          <Button
+                            onClick={handleCreateShoppingList}
+                            disabled={creatingList}
+                          >
+                            {creatingList ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <ShoppingCart className="size-4" />
+                            )}
+                            {t("createShoppingList")}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </>
                 )}
               </CardContent>
             </Card>

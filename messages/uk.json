@@ -43,12 +43,23 @@
     "placeholder": "Борщ\n\nІнгредієнти:\n- буряк 2 шт\n- картопля 3 шт\n- мʼясо 500 г\n- сіль, перець за смаком",
     "parsing": "Обробка...",
     "parseButton": "Витягти інгредієнти",
+    "tabText": "Текст",
+    "tabImage": "Фото",
+    "imageUploadTitle": "Фото рецепту",
+    "imageUploadDescription": "Завантажте фото або скриншот рецепту",
+    "imageDropzone": "Натисніть або перетягніть зображення",
+    "imageFormats": "JPEG, PNG, WebP — до 10 МБ",
+    "imageSelected": "Обрано: {name}",
+    "changeImage": "Змінити",
+    "parseImageButton": "Розпізнати інгредієнти",
     "unexpectedError": "Сталася неочікувана помилка.",
     "ingredientsTitle": "Інгредієнти",
     "ingredientsFound": "{count, plural, one {# інгредієнт знайдено} few {# інгредієнти знайдено} many {# інгредієнтів знайдено} other {# інгредієнтів знайдено}}",
     "categoryPlaceholder": "Категорія",
     "listNamePlaceholder": "Назва списку (необовʼязково)",
     "createShoppingList": "Створити список покупок",
+    "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
+    "cancel": "Скасувати",
     "saving": "Збереження...",
     "savedSuccess": "Список створено",
     "viewShoppingLists": "Переглянути списки"
@@ -126,7 +137,11 @@
     "viewShoppingLists": "Перейти до списків покупок",
     "noRecipes": "Рецепт не згенеровано. Спробуйте інший запит.",
     "instructionsLabel": "Приготування",
-    "streamingMessage": "Ми готуємо вам рецепт..."
+    "streamingMessage": "Ми готуємо вам рецепт...",
+    "createShoppingList": "Створити список покупок",
+    "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
+    "listNamePlaceholder": "Назва списку (необов'язково)",
+    "cancel": "Скасувати"
   },
   "MealPlanner": {
     "heading": "План харчування",
@@ -317,6 +332,7 @@
     "unexpectedError": "Сталася неочікувана помилка.",
     "source": {
       "PARSED": "Розібраний",
+      "PARSED_IMAGE": "З фото",
       "GENERATED": "Згенерований",
       "SUGGESTED": "Підібраний",
       "MANUAL": "Власний",
@@ -343,6 +359,9 @@
     "ingredientsCount": "{count, plural, one {# інгредієнт} few {# інгредієнти} many {# інгредієнтів} other {# інгредієнтів}}",
     "noIngredients": "Для цього рецепту немає збережених інгредієнтів.",
     "createShoppingList": "Створити список покупок",
+    "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
+    "listNamePlaceholder": "Назва списку (необовʼязково)",
+    "cancelButton": "Скасувати",
     "editRecipe": "Редагувати"
   },
   "Spaces": {
@@ -427,11 +446,15 @@
     "emptyRecipes": "У цьому плані ще немає рецептів",
     "viewShoppingList": "Переглянути список покупок",
     "createShoppingList": "Створити список покупок",
+    "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
+    "listNamePlaceholder": "Назва списку (необовʼязково)",
+    "cancelButton": "Скасувати",
     "creatingShoppingList": "Створення...",
     "shoppingListCreated": "Список покупок створено",
     "source": {
       "GENERATED": "Згенерований",
       "PARSED": "Розібраний",
+      "PARSED_IMAGE": "З фото",
       "SUGGESTED": "Підібраний",
       "MEAL_PLAN": "З плану",
       "MANUAL": "Власний"

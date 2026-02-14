@@ -54,6 +54,7 @@ interface Props {
   addItemPlaceholder?: string
   qtyPlaceholder?: string
   unitPlaceholder?: string
+  notePlaceholder?: string
   grouped?: boolean
   onToggleGrouped?: () => void
   groupByLabel?: string
@@ -86,6 +87,7 @@ export function ShoppingListCard({
   addItemPlaceholder,
   qtyPlaceholder,
   unitPlaceholder,
+  notePlaceholder,
   grouped,
   onToggleGrouped,
   groupByLabel,
@@ -282,6 +284,7 @@ export function ShoppingListCard({
               unitOptions={unitOptions}
               categoryOptions={categoryOptions}
               categoryPlaceholder={categoryPlaceholder}
+              notePlaceholder={notePlaceholder}
               uncategorizedLabel={uncategorizedLabel}
               sensors={sensors}
             />
@@ -318,6 +321,7 @@ export function ShoppingListCard({
                       unitOptions={unitOptions}
                       categoryOptions={categoryOptions}
                       categoryPlaceholder={categoryPlaceholder}
+                      notePlaceholder={notePlaceholder}
                     />
                   ))}
                 </div>
@@ -333,6 +337,7 @@ export function ShoppingListCard({
               placeholder={addItemPlaceholder}
               qtyPlaceholder={qtyPlaceholder}
               unitPlaceholder={unitPlaceholder}
+              notePlaceholder={notePlaceholder}
             />
           )}
           {onDelete && (

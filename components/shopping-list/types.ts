@@ -3,6 +3,7 @@ export interface ChecklistItem {
   name: string
   badge: string | null
   noteBadge: string | null
+  note?: string | null
   checked: boolean
   rawQuantity?: number
   rawUnit?: string
@@ -26,4 +27,5 @@ export interface ItemData {
   quantity: number
   unit: string
   categoryId?: string
+  note?: string
 }

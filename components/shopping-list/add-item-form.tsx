@@ -23,6 +23,7 @@ export function AddItemForm({
   placeholder,
   qtyPlaceholder,
   unitPlaceholder,
+  notePlaceholder,
 }: {
   onAddItem: (data: ItemData) => void
   unitOptions?: UnitOption[]
@@ -31,11 +32,13 @@ export function AddItemForm({
   placeholder?: string
   qtyPlaceholder?: string
   unitPlaceholder?: string
+  notePlaceholder?: string
 }) {
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState("")
   const [unit, setUnit] = useState("")
   const [categoryId, setCategoryId] = useState(NONE_CATEGORY)
+  const [note, setNote] = useState("")
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,11 +49,13 @@ export function AddItemForm({
       quantity: Number(quantity) || 0,
       unit: unit || "pcs",
       categoryId: categoryId === NONE_CATEGORY ? undefined : categoryId,
+      note: note.trim() || undefined,
     })
     setName("")
     setQuantity("")
     setUnit("")
     setCategoryId(NONE_CATEGORY)
+    setNote("")
   }
 
   return (
@@ -103,6 +108,12 @@ export function AddItemForm({
           </SelectContent>
         </Select>
       )}
+      <Input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder={notePlaceholder}
+        className="min-w-0 flex-1 basis-32 h-7 text-sm"
+      />
       <Button
         type="submit"
         variant="ghost"

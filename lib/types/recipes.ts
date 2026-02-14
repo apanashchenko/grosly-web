@@ -14,6 +14,7 @@ export interface ParsedIngredient {
 
 export interface ParseRecipeResponse {
   ingredients: ParsedIngredient[]
+  recipeText?: string
 }
 
 export interface RecipeIngredient {
@@ -73,13 +74,14 @@ export interface SuggestRecipesResponse {
 
 // --- Saved Recipes ---
 
-export type RecipeSource = "PARSED" | "GENERATED" | "SUGGESTED" | "MANUAL"
+export type RecipeSource = "PARSED" | "PARSED_IMAGE" | "GENERATED" | "SUGGESTED" | "MANUAL"
 
 export interface RecipeIngredientInput {
   name: string
   quantity: number
   unit: string
   categoryId?: string
+  note?: string
 }
 
 export interface RecipeIngredientResponse {
@@ -87,6 +89,7 @@ export interface RecipeIngredientResponse {
   name: string
   quantity: number
   unit: string
+  note: string | null
   category: { id: string; name: string; slug: string; icon: string | null } | null
   position: number
 }

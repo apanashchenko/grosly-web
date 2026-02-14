@@ -24,6 +24,7 @@ export function InlineEditForm({
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
+  notePlaceholder,
 }: {
   item: ChecklistItem
   sortable: boolean
@@ -33,11 +34,13 @@ export function InlineEditForm({
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
+  notePlaceholder?: string
 }) {
   const [editName, setEditName] = useState(item.name)
   const [editQuantity, setEditQuantity] = useState(String(item.rawQuantity ?? 0))
   const [editUnit, setEditUnit] = useState(item.rawUnit ?? "pcs")
   const [editCategoryId, setEditCategoryId] = useState(item.rawCategoryId ?? NONE_CATEGORY)
+  const [editNote, setEditNote] = useState(item.note ?? "")
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   function handleSave() {
@@ -48,6 +51,7 @@ export function InlineEditForm({
       quantity: Number(editQuantity) || 0,
       unit: editUnit || "pcs",
       categoryId: editCategoryId === NONE_CATEGORY ? undefined : editCategoryId,
+      note: editNote.trim() || undefined,
     })
   }
 
@@ -118,6 +122,13 @@ export function InlineEditForm({
           </SelectContent>
         </Select>
       )}
+      <Input
+        value={editNote}
+        onChange={(e) => setEditNote(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={notePlaceholder}
+        className="min-w-0 flex-[1_1_8rem] h-7 text-sm"
+      />
       <div className="flex items-center gap-1.5 ml-auto">
         <Button
           variant="ghost"

@@ -34,6 +34,14 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -53,9 +61,11 @@ import type { MealPlanResponse } from "@/lib/types"
 
 const SOURCE_STYLES: Record<string, string> = {
   PARSED: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+  PARSED_IMAGE: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
   GENERATED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   SUGGESTED: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
-  MEAL_PLAN: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
+  MANUAL: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
+  MEAL_PLAN: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
 }
 
 function formatDate(iso: string, locale: string) {
@@ -103,6 +113,8 @@ export function MealPlanDetail({ planId }: Props) {
 
   // Shopping list generation
   const [creatingSL, setCreatingSL] = useState(false)
+  const [createListDialogOpen, setCreateListDialogOpen] = useState(false)
+  const [listName, setListName] = useState("")
 
   const fetchPlan = useCallback(async () => {
     setLoading(true)
@@ -201,9 +213,10 @@ export function MealPlanDetail({ planId }: Props) {
         }))
       )
       const list = await createShoppingList({
-        name: plan.name,
+        name: listName.trim() || plan.name,
         items,
       })
+      setCreateListDialogOpen(false)
       router.push(`/shopping-list/${list.id}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("unexpectedError"))
@@ -434,19 +447,52 @@ export function MealPlanDetail({ planId }: Props) {
           {/* Action buttons */}
           <div className="mb-4 flex flex-wrap justify-end gap-2">
             {plan.recipes.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreateShoppingList}
-                disabled={creatingSL}
-              >
-                {creatingSL ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setListName(plan.name)
+                    setCreateListDialogOpen(true)
+                  }}
+                >
                   <ShoppingCart className="size-4" />
-                )}
-                {t("createShoppingList")}
-              </Button>
+                  {t("createShoppingList")}
+                </Button>
+                <Dialog open={createListDialogOpen} onOpenChange={setCreateListDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t("createShoppingList")}</DialogTitle>
+                      <DialogDescription>{t("createListDescription")}</DialogDescription>
+                    </DialogHeader>
+                    <Input
+                      value={listName}
+                      onChange={(e) => setListName(e.target.value)}
+                      placeholder={t("listNamePlaceholder")}
+                    />
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCreateListDialogOpen(false)}
+                        disabled={creatingSL}
+                      >
+                        {t("cancelButton")}
+                      </Button>
+                      <Button
+                        onClick={handleCreateShoppingList}
+                        disabled={creatingSL}
+                      >
+                        {creatingSL ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="size-4" />
+                        )}
+                        {t("createShoppingList")}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
             <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="size-4" />

@@ -5,6 +5,7 @@ export interface ShoppingListItemRequest {
   purchased?: boolean
   categoryId?: string
   position?: number
+  note?: string
 }
 
 export interface CreateShoppingListRequest {
@@ -41,6 +42,7 @@ export interface ShoppingListItemResponse {
   name: string
   quantity: number
   unit: string
+  note: string | null
   purchased: boolean
   category: CategoryInfo | null
   position: number
@@ -54,6 +56,7 @@ export interface UpdateShoppingListItemRequest {
   purchased?: boolean
   categoryId?: string
   position?: number
+  note?: string
 }
 
 export interface ShoppingListResponse {

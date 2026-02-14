@@ -10,7 +10,8 @@ import type {
   PaginatedResponse,
   PaginationParams,
 } from "@/lib/types"
-import { request } from "./client"
+import { request, API_BASE } from "./client"
+import { getAccessToken } from "@/lib/auth/storage"
 import { streamRequest, type StreamCallbacks } from "./streaming"
 import { buildPaginationQuery } from "./utils"
 
@@ -19,6 +20,34 @@ export function parseRecipe(recipeText: string) {
     method: "POST",
     body: JSON.stringify({ recipeText }),
   })
+}
+
+export async function parseRecipeImage(file: File): Promise<ParseRecipeResponse> {
+  const formData = new FormData()
+  formData.append("image", file)
+
+  const headers: Record<string, string> = {}
+  const token = getAccessToken()
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE}/recipes/parse-image`, {
+    method: "POST",
+    headers,
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    const message =
+      Array.isArray(errorData?.message)
+        ? errorData.message[0]
+        : errorData?.message ?? "Something went wrong. Please try again."
+    throw new Error(message)
+  }
+
+  return response.json()
 }
 
 export function generateSingleRecipe(query: string, language: string) {

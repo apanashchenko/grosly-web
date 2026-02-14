@@ -225,7 +225,7 @@ export function ShoppingListIndex() {
   }
 
   // --- Edit item ---
-  async function handleEditItem(listId: string, index: number, data: { name: string; quantity: number; unit: string; categoryId?: string }) {
+  async function handleEditItem(listId: string, index: number, data: { name: string; quantity: number; unit: string; categoryId?: string; note?: string }) {
     const list = lists.find((l) => l.id === listId)
     if (!list) return
     const item = list.items[index]
@@ -248,6 +248,7 @@ export function ShoppingListIndex() {
                       name: data.name,
                       quantity: data.quantity,
                       unit: data.unit,
+                      note: data.note ?? null,
                       category: newCategory
                         ? { id: newCategory.id, name: newCategory.name, icon: newCategory.icon }
                         : null,
@@ -265,6 +266,7 @@ export function ShoppingListIndex() {
         quantity: data.quantity,
         unit: data.unit,
         categoryId: data.categoryId,
+        note: data.note,
       }, spaceId)
       setLists((prev) => prev.map((l) => (l.id === listId ? updated : l)))
     } catch (e) {
@@ -339,7 +341,7 @@ export function ShoppingListIndex() {
   }
 
   // --- Add item to existing list ---
-  async function handleAddItem(listId: string, data: { name: string; quantity: number; unit: string; categoryId?: string }) {
+  async function handleAddItem(listId: string, data: { name: string; quantity: number; unit: string; categoryId?: string; note?: string }) {
     const list = lists.find((l) => l.id === listId)
     if (!list) return
 
@@ -355,6 +357,7 @@ export function ShoppingListIndex() {
       name: data.name,
       quantity: data.quantity,
       unit: data.unit,
+      note: data.note ?? null,
       purchased: false,
       category: tempCategory
         ? { id: tempCategory.id, name: tempCategory.name, icon: tempCategory.icon }
@@ -371,7 +374,7 @@ export function ShoppingListIndex() {
 
     try {
       const updatedList = await addShoppingListItems(listId, [
-        { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, position: newPosition },
+        { name: data.name, quantity: data.quantity, unit: data.unit, categoryId: data.categoryId, note: data.note, position: newPosition },
       ], spaceId)
       setLists((prev) =>
         prev.map((l) => (l.id === listId ? updatedList : l))
@@ -559,6 +562,7 @@ export function ShoppingListIndex() {
                   noteBadge: item.category
                     ? `${item.category.icon ?? ""} ${fullCat ? localizeCategoryName(fullCat) : item.category.name}`.trim()
                     : null,
+                  note: item.note,
                   checked: item.purchased,
                   rawQuantity: item.quantity,
                   rawUnit: item.unit,
@@ -580,6 +584,7 @@ export function ShoppingListIndex() {
               addItemPlaceholder={t("itemNamePlaceholder")}
               qtyPlaceholder={t("qtyPlaceholder")}
               unitPlaceholder={t("unitPlaceholder")}
+              notePlaceholder={t("notePlaceholder")}
               grouped={list.groupedByCategories}
               onToggleGrouped={combineMode ? undefined : () => toggleGrouped(list.id)}
               groupByLabel={t("groupByCategory")}
