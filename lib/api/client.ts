@@ -9,6 +9,8 @@ import { ConflictError } from "./errors"
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
 
+const REQUEST_ID_HEADER = "x-request-id"
+
 // Paths that should never have auth headers or trigger refresh
 const AUTH_PATHS = ["/auth/google", "/auth/refresh"]
 
@@ -43,8 +45,11 @@ async function refreshAccessToken(): Promise<boolean> {
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const isAuthPath = AUTH_PATHS.some((p) => path.startsWith(p))
 
+  const requestId = `${Date.now()}-${Math.floor(Math.random() * 100)}`
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    [REQUEST_ID_HEADER]: requestId,
     ...(options?.headers as Record<string, string>),
   }
 
@@ -74,6 +79,7 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
       // Retry with new token
       const retryHeaders: Record<string, string> = {
         "Content-Type": "application/json",
+        [REQUEST_ID_HEADER]: requestId,
         ...(options?.headers as Record<string, string>),
       }
       const newToken = getAccessToken()
