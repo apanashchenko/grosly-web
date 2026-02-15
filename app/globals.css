@@ -171,6 +171,7 @@
   left: 0;
   right: 0;
   top: 50%;
+  pointer-events: none;
   height: 6px;
   margin-top: -3px;
   background-color: var(--color-muted-foreground);

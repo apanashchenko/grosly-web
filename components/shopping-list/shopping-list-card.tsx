@@ -5,7 +5,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -122,8 +123,11 @@ export function ShoppingListCard({
   const [labelDraft, setLabelDraft] = useState(label ?? "")
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -137,13 +141,10 @@ export function ShoppingListCard({
     }
   }
 
-  // Sort checked items to the bottom of the list
+  // Sort checked items to the bottom, preserve relative order within each group
   const sortedItems = items
     .map((item, index) => ({ item, originalIndex: index }))
-    .sort((a, b) => {
-      if (a.item.checked === b.item.checked) return 0
-      return a.item.checked ? 1 : -1
-    })
+    .sort((a, b) => Number(a.item.checked) - Number(b.item.checked))
 
   const itemIds = sortedItems.map(({ originalIndex }) => originalIndex)
 

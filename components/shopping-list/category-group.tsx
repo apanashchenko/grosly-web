@@ -78,11 +78,8 @@ export function GroupedItems({
     groupMap.get(catId)!.items.push({ item, originalIndex: index })
   })
 
-  // Move fully checked groups and uncategorized to end
+  // Move uncategorized to end
   const groups = [...groupMap.values()].sort((a, b) => {
-    const aAllChecked = a.items.length > 0 && a.items.every(({ item }) => item.checked)
-    const bAllChecked = b.items.length > 0 && b.items.every(({ item }) => item.checked)
-    if (aAllChecked !== bAllChecked) return aAllChecked ? 1 : -1
     if (a.categoryId === null) return 1
     if (b.categoryId === null) return -1
     return 0
@@ -141,14 +138,13 @@ function CategoryGroup({
   const [open, setOpen] = useState(true)
   const sortable = !!onReorderItems
 
-  // Sort checked items to the bottom of the group
-  const sortedGroupItems = [...group.items].sort((a, b) => {
-    if (a.item.checked === b.item.checked) return 0
-    return a.item.checked ? 1 : -1
-  })
+  // Sort checked items to the bottom within each group
+  const sortedGroupItems = [...group.items].sort(
+    (a, b) => Number(a.item.checked) - Number(b.item.checked)
+  )
 
   const itemIds = sortedGroupItems.map(({ originalIndex }) => originalIndex)
-  const allChecked = group.items.length > 0 && group.items.every(({ item }) => item.checked)
+  const allChecked = sortedGroupItems.length > 0 && sortedGroupItems.every(({ item }) => item.checked)
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event

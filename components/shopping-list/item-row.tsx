@@ -57,39 +57,38 @@ export function ItemRow({
     )
   }
 
+  function handleRowClick(e: React.MouseEvent) {
+    if (!onToggle) return
+    const target = e.target as HTMLElement
+    if (target.closest("[data-no-toggle]")) return
+    onToggle()
+  }
+
   return (
     <div
       className={cn(
         "group rounded-lg px-3 border transition-colors duration-150",
         isDragging ? "z-10 bg-muted/50 shadow-sm opacity-90" : "hover:bg-muted/30",
-        item.checked && "bg-muted/40 border-muted"
+        item.checked && "bg-muted/40 border-muted",
+        onToggle && "cursor-pointer"
       )}
+      onClick={handleRowClick}
     >
       <div className={cn(
-        "relative flex w-full items-center gap-2 py-3",
+        "relative flex w-full items-stretch gap-2 py-3",
         item.checked && "hand-strikethrough"
       )}>
-        {sortHandle}
-        {onToggle ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="flex flex-1 flex-col gap-0.5 text-left min-w-0"
+        <div data-no-toggle>{sortHandle}</div>
+        <span className="flex flex-1 flex-col justify-center gap-0.5 text-left min-w-0">
+          <span
+            className={cn(
+              "font-medium truncate transition-opacity",
+              item.checked && "opacity-40"
+            )}
           >
-            <span
-              className={cn(
-                "font-medium truncate transition-opacity",
-                item.checked && "opacity-40"
-              )}
-            >
-              {item.name}
-            </span>
-          </button>
-        ) : (
-          <span className="flex flex-1 flex-col gap-0.5 text-left min-w-0">
-            <span className="font-medium truncate">{item.name}</span>
+            {item.name}
           </span>
-        )}
+        </span>
         <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5 self-stretch justify-between">
           <div className="flex flex-col items-end gap-0.5">
             {item.createdByName && (
@@ -116,6 +115,7 @@ export function ItemRow({
                 onClick={onStartEdit}
                 disabled={item.checked}
                 className="text-muted-foreground/40 hover:text-muted-foreground"
+                data-no-toggle
               >
                 <Pencil className="size-3.5" />
               </Button>
@@ -127,6 +127,7 @@ export function ItemRow({
                 onClick={onDeleteItem}
                 disabled={item.checked}
                 className="text-destructive/60 hover:text-destructive"
+                data-no-toggle
               >
                 <Trash2 className="size-3.5" />
               </Button>
