@@ -118,6 +118,10 @@
     "loadingMore": "Завантаження...",
     "backToLists": "До списків",
     "openList": "Відкрити",
+    "deleteListTitle": "Видалити список покупок?",
+    "deleteListDescription": "Список покупок буде видалено назавжди. Цю дію не можна скасувати.",
+    "deleteListConfirm": "Видалити",
+    "deleteListCancel": "Скасувати",
     "units": {
       "pcs": "шт",
       "g": "г",

@@ -118,6 +118,10 @@
     "loadingMore": "Loading...",
     "backToLists": "Back to lists",
     "openList": "Open",
+    "deleteListTitle": "Delete shopping list?",
+    "deleteListDescription": "This shopping list will be permanently deleted. This action cannot be undone.",
+    "deleteListConfirm": "Delete",
+    "deleteListCancel": "Cancel",
     "units": {
       "pcs": "pcs",
       "g": "g",

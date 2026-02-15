@@ -222,7 +222,7 @@ export function RecipeParser() {
     setError(null)
     try {
       await createShoppingList({
-        ...(listName.trim() ? { name: listName.trim() } : {}),
+        name: listName.trim() || tList("defaultListName", { date: new Date().toLocaleDateString("sv-SE") }),
         items: ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity ?? 0,

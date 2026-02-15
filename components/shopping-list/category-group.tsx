@@ -78,8 +78,11 @@ export function GroupedItems({
     groupMap.get(catId)!.items.push({ item, originalIndex: index })
   })
 
-  // Move uncategorized to end
+  // Sort: fully checked groups to bottom, uncategorized to end within each tier
   const groups = [...groupMap.values()].sort((a, b) => {
+    const aAllChecked = a.items.length > 0 && a.items.every(({ item }) => item.checked)
+    const bAllChecked = b.items.length > 0 && b.items.every(({ item }) => item.checked)
+    if (aAllChecked !== bAllChecked) return Number(aAllChecked) - Number(bAllChecked)
     if (a.categoryId === null) return 1
     if (b.categoryId === null) return -1
     return 0

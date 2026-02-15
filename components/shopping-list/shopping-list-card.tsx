@@ -29,6 +29,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { SortableItem } from "./sortable-item"
 import { AddItemForm } from "./add-item-form"
 import { GroupedItems } from "./category-group"
@@ -70,6 +81,10 @@ interface Props {
   isPinned?: boolean
   onTogglePin?: () => void
   pinLabel?: string
+  deleteTitle?: string
+  deleteDescription?: string
+  deleteConfirm?: string
+  deleteCancel?: string
   selectable?: boolean
   selected?: boolean
   onSelect?: () => void
@@ -110,6 +125,10 @@ export function ShoppingListCard({
   pinLabel,
   onShareToSpace,
   shareToSpaceLabel,
+  deleteTitle,
+  deleteDescription,
+  deleteConfirm,
+  deleteCancel,
   selectable,
   selected,
   onSelect,
@@ -475,13 +494,31 @@ export function ShoppingListCard({
             />
           )}
           {onDelete && (
-            <Button
-              variant="ghost"
-              onClick={onDelete}
-              className="w-full mt-3 text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full mt-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{deleteTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>{deleteDescription}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{deleteCancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleteConfirm}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </CardContent>
       )}

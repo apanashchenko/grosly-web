@@ -46,6 +46,7 @@ const MAX_LENGTH = 5000
 export function RecipeGenerator() {
   const t = useTranslations("RecipeGenerator")
   const tSave = useTranslations("SavedRecipes")
+  const tList = useTranslations("ShoppingList")
   const locale = useLocale()
   const { categoryMap } = useCategories()
 
@@ -104,7 +105,7 @@ export function RecipeGenerator() {
     setSavingList(true)
     try {
       await createShoppingList({
-        ...(listName.trim() ? { name: listName.trim() } : {}),
+        name: listName.trim() || tList("defaultListName", { date: new Date().toLocaleDateString("sv-SE") }),
         items: recipe.ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,
