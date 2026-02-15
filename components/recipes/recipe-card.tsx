@@ -479,7 +479,7 @@ export function RecipeCard({
                     <div className="group/ing flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <span
                         className={cn(
-                          "font-medium break-words",
+                          "flex-1 font-medium break-words",
                           isHighlighted && "text-primary bg-primary/10 px-1 rounded"
                         )}
                       >

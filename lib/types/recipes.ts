@@ -42,13 +42,18 @@ export interface ParsedRequest {
 
 export interface SingleRecipeResponse {
   numberOfPeople: number
-  recipe: GeneratedRecipe
+  recipes: GeneratedRecipe[]
+}
+
+export interface MealPlanDay {
+  dayNumber: number
+  recipes: GeneratedRecipe[]
 }
 
 export interface GeneratedMealPlanResponse {
   parsedRequest: ParsedRequest
   description: string | null
-  recipes: GeneratedRecipe[]
+  days: MealPlanDay[]
 }
 
 /** @deprecated Use SingleRecipeResponse or GeneratedMealPlanResponse */

@@ -437,7 +437,7 @@ export function ManualRecipeCreator({
                             {tSave("recipeSaved")}
                           </Badge>
                           <Button variant="link" size="sm" asChild>
-                            <Link href="/recipes">
+                            <Link href="/recipes" prefetch={false}>
                               <Bookmark className="size-4" />
                               {tSave("viewSavedRecipes")}
                             </Link>

@@ -18,6 +18,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react"
+
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -55,9 +56,11 @@ import {
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { RecipePickerDialog } from "@/components/meal-plans/recipe-picker-dialog"
+import { ManualRecipeCreator } from "@/components/recipes/manual-recipe-creator"
 import { Link, useRouter } from "@/i18n/navigation"
-import { getMealPlan, updateMealPlan, deleteMealPlan, createShoppingList } from "@/lib/api"
-import type { MealPlanResponse } from "@/lib/types"
+import { getMealPlan, updateMealPlan, deleteMealPlan, createShoppingList, saveRecipe } from "@/lib/api"
+import type { MealPlanResponse, ParsedIngredient } from "@/lib/types"
+import { NONE_CATEGORY } from "@/lib/constants"
 
 const SOURCE_STYLES: Record<string, string> = {
   PARSED: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
@@ -107,6 +110,7 @@ export function MealPlanDetail({ planId }: Props) {
   // Add recipe dialog
   const [pickerOpen, setPickerOpen] = useState(false)
   const [addingRecipes, setAddingRecipes] = useState(false)
+  const [creatingNewRecipe, setCreatingNewRecipe] = useState(false)
 
   // Expanded recipes
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set())
@@ -173,12 +177,16 @@ export function MealPlanDetail({ planId }: Props) {
     setEditingMeta(false)
     try {
       await updateMealPlan(plan.id, { numberOfDays: days, numberOfPeople: people })
-    } catch {
+    } catch (err) {
       setPlan((prev) =>
         prev
           ? { ...prev, numberOfDays: prevDays, numberOfPeople: prevPeople }
           : prev
       )
+      if (err instanceof Error) {
+        const msg = err.message
+        toast.error(Array.isArray(msg) ? msg[0] : msg)
+      }
     }
   }
 
@@ -186,9 +194,9 @@ export function MealPlanDetail({ planId }: Props) {
     if (!plan) return
     setAddingRecipes(true)
     try {
-      const existingIds = plan.recipes.map((r) => r.recipeId)
+      const existing = plan.recipes.map((r) => ({ recipeId: r.recipeId, dayNumber: r.dayNumber }))
       const updated = await updateMealPlan(plan.id, {
-        recipes: [...existingIds, ...recipeIds],
+        recipes: [...existing, ...recipeIds.map((id) => ({ recipeId: id }))],
       })
       setPlan(updated)
       setPickerOpen(false)
@@ -197,6 +205,43 @@ export function MealPlanDetail({ planId }: Props) {
       // keep dialog open on error
     } finally {
       setAddingRecipes(false)
+    }
+  }
+
+  async function handleNewRecipeAdd(recipe: {
+    title: string
+    text: string
+    ingredients: ParsedIngredient[]
+  }) {
+    if (!plan) return
+    try {
+      const saved = await saveRecipe({
+        title: recipe.title,
+        source: "MEAL_PLAN",
+        text: recipe.text,
+        ...(recipe.ingredients.length > 0 && {
+          ingredients: recipe.ingredients.map((ing) => ({
+            name: ing.name,
+            quantity: ing.quantity ?? 0,
+            unit: ing.unit,
+            ...(ing.categoryId && ing.categoryId !== NONE_CATEGORY
+              ? { categoryId: ing.categoryId }
+              : {}),
+          })),
+        }),
+      })
+      const existing = plan.recipes.map((r) => ({
+        recipeId: r.recipeId,
+        dayNumber: r.dayNumber,
+      }))
+      const updated = await updateMealPlan(plan.id, {
+        recipes: [...existing, { recipeId: saved.id }],
+      })
+      setPlan(updated)
+      setCreatingNewRecipe(false)
+      toast.success(t("addedToast"))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("unexpectedError"))
     }
   }
 
@@ -233,6 +278,22 @@ export function MealPlanDetail({ planId }: Props) {
     } catch {
       // keep on page
     }
+  }
+
+  if (creatingNewRecipe) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <PageHeader
+          title={t("newRecipeTitle")}
+          subtitle={t("newRecipeDescription")}
+        />
+        <ManualRecipeCreator
+          mode="meal-plan"
+          onAdd={handleNewRecipeAdd}
+          onCancel={() => setCreatingNewRecipe(false)}
+        />
+      </main>
+    )
   }
 
   return (
@@ -498,6 +559,10 @@ export function MealPlanDetail({ planId }: Props) {
               <Plus className="size-4" />
               {t("addRecipe")}
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setCreatingNewRecipe(true)}>
+              <Pencil className="size-4" />
+              {t("createRecipe")}
+            </Button>
           </div>
 
           <RecipePickerDialog
@@ -508,69 +573,89 @@ export function MealPlanDetail({ planId }: Props) {
             excludeRecipeIds={plan.recipes.map((r) => r.recipeId)}
           />
 
-          {/* Recipes list */}
-          <div className="space-y-2">
-            {plan.recipes.map((recipe) => {
-              const isExpanded = expandedRecipes.has(recipe.id)
-              return (
-                <Card
-                  key={recipe.id}
-                  className="cursor-pointer transition-shadow hover:shadow-md hover:border-primary/20"
-                  onClick={() => router.push(`/recipes/${recipe.recipeId}`)}
-                >
-                  <CardHeader className="py-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {recipe.recipeText && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="shrink-0 text-muted-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpandedRecipes((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(recipe.id)) next.delete(recipe.id)
-                              else next.add(recipe.id)
-                              return next
-                            })
-                          }}
-                        >
-                          <ChevronDown
-                            className={cn(
-                              "size-4 transition-transform",
-                              isExpanded && "rotate-180"
-                            )}
-                          />
-                        </Button>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm">
-                          {recipe.recipeTitle}
-                        </CardTitle>
-                      </div>
-                    </div>
-                    <CardAction className="flex items-center gap-1">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${SOURCE_STYLES[recipe.recipeSource] ?? ""}`}
-                      >
-                        {t(`source.${recipe.recipeSource}`)}
-                      </Badge>
-                    </CardAction>
-                  </CardHeader>
-                  {isExpanded && recipe.recipeText && (
-                    <CardContent className="pt-0">
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                        {recipe.recipeText}
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              )
-            })}
-          </div>
+          {/* Recipes list grouped by day */}
+          {plan.recipes.length > 0 ? (
+            <div className="space-y-6">
+              {(() => {
+                const dayMap = new Map<number, typeof plan.recipes>()
+                for (const recipe of plan.recipes) {
+                  const day = recipe.dayNumber
+                  if (!dayMap.has(day)) dayMap.set(day, [])
+                  dayMap.get(day)!.push(recipe)
+                }
+                const days = [...dayMap.entries()].sort(([a], [b]) => a - b)
+                const hasDayGrouping = days.length > 1 || (days.length === 1 && days[0][0] > 0)
 
-          {plan.recipes.length === 0 && (
+                return days.map(([dayNumber, recipes]) => (
+                  <div key={dayNumber}>
+                    {hasDayGrouping && (
+                      <h3 className="mb-2 pl-1 text-sm font-semibold text-muted-foreground">
+                        {t("dayLabel", { day: dayNumber })}
+                      </h3>
+                    )}
+                    <div className="space-y-2">
+                      {recipes.map((recipe) => {
+                        const isExpanded = expandedRecipes.has(recipe.id)
+                        return (
+                          <Card
+                            key={recipe.id}
+                            className="cursor-pointer transition-shadow hover:shadow-md hover:border-primary/20"
+                            onClick={() => router.push(`/recipes/${recipe.recipeId}`)}
+                          >
+                            <CardHeader className="py-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {recipe.recipeText && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="shrink-0 text-muted-foreground"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setExpandedRecipes((prev) => {
+                                        const next = new Set(prev)
+                                        if (next.has(recipe.id)) next.delete(recipe.id)
+                                        else next.add(recipe.id)
+                                        return next
+                                      })
+                                    }}
+                                  >
+                                    <ChevronDown
+                                      className={cn(
+                                        "size-4 transition-transform",
+                                        isExpanded && "rotate-180"
+                                      )}
+                                    />
+                                  </Button>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <CardTitle className="text-sm">
+                                    {recipe.recipeTitle}
+                                  </CardTitle>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={`shrink-0 text-xs ${SOURCE_STYLES[recipe.recipeSource] ?? ""}`}
+                                >
+                                  {t(`source.${recipe.recipeSource}`)}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            {isExpanded && recipe.recipeText && (
+                              <CardContent className="pt-0">
+                                <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                                  {recipe.recipeText}
+                                </div>
+                              </CardContent>
+                            )}
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          ) : (
             <EmptyState icon={UtensilsCrossed} message={t("emptyRecipes")} />
           )}
 

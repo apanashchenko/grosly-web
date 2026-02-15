@@ -46,6 +46,7 @@ export interface CreateMealPlanRecipeInput {
   title: string
   source: MealPlanRecipeSource
   text: string
+  dayNumber?: number
   ingredients?: { name: string; quantity: number; unit: string; categoryId?: string }[]
 }
 
@@ -63,5 +64,5 @@ export interface UpdateMealPlanRequest {
   description?: string | null
   numberOfDays?: number
   numberOfPeople?: number
-  recipes?: string[]
+  recipes?: { recipeId: string; dayNumber?: number }[]
 }

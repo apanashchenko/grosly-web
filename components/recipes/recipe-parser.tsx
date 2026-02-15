@@ -626,7 +626,7 @@ export function RecipeParser() {
                       {tSave("recipeSaved")}
                     </Badge>
                     <Button variant="link" size="sm" asChild>
-                      <Link href="/recipes">
+                      <Link href="/recipes" prefetch={false}>
                         <Bookmark className="size-4" />
                         {tSave("viewSavedRecipes")}
                       </Link>
@@ -658,7 +658,7 @@ export function RecipeParser() {
                         {t("savedSuccess")}
                       </Badge>
                       <Button variant="link" size="sm" asChild>
-                        <Link href="/shopping-list">
+                        <Link href="/shopping-list" prefetch={false}>
                           <ShoppingCart className="size-4" />
                           {t("viewShoppingLists")}
                         </Link>

@@ -81,7 +81,7 @@ export function ItemRow({
         "relative flex w-full items-stretch gap-2 py-3",
         item.checked && "hand-strikethrough"
       )}>
-        <div data-no-toggle>{sortHandle}</div>
+        <div data-no-toggle className="flex items-center">{sortHandle}</div>
         <span className="flex flex-1 flex-col justify-center gap-0.5 text-left min-w-0">
           <span
             className={cn(

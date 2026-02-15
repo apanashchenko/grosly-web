@@ -142,7 +142,7 @@
     "subtitle": "Describe a dish and we'll generate a recipe with ingredients.",
     "queryTitle": "Describe Your Dish",
     "queryDescription": "Tell us what you'd like to cook — dish name and number of people",
-    "placeholder": "Borscht for 4 people",
+    "placeholder": "Pasta carbonara for 2 people",
     "generating": "Generating...",
     "generateButton": "Generate Recipe",
     "unexpectedError": "An unexpected error occurred.",
@@ -167,14 +167,17 @@
     "categoryPlaceholder": "Category",
     "addIngredient": "Add ingredient",
     "addStep": "Add step",
-    "stepPlaceholder": "Step description"
+    "stepPlaceholder": "Step description",
+    "selectRecipe": "Select recipe",
+    "selected": "Selected",
+    "recipesFound": "{count, plural, one {# recipe} other {# recipes}}"
   },
   "MealPlanner": {
     "heading": "Meal Plan",
     "subtitle": "Describe your plan — number of people, days, dietary preferences — and we'll generate recipes.",
     "queryTitle": "Describe Your Plan",
     "queryDescription": "Tell us what you'd like to cook — number of people, days, dietary preferences",
-    "placeholder": "Vegetarian meal plan for 2 people for 3 days",
+    "placeholder": "Lactose-free breakfasts for 3 days for 2 people",
     "generating": "Generating...",
     "generateButton": "Generate Plan",
     "unexpectedError": "An unexpected error occurred.",
@@ -213,7 +216,10 @@
     "planNamePlaceholder": "Plan name (optional)",
     "cancel": "Cancel",
     "savePlanConfirm": "Save",
-    "defaultPlanName": "Meal plan {date}"
+    "defaultPlanName": "Meal plan {date}",
+    "dayTitle": "Day {day}",
+    "selectRecipe": "Select recipe",
+    "selected": "Selected"
   },
   "RecipeSuggester": {
     "heading": "Recipe Suggester",
@@ -230,7 +236,7 @@
     "youHave": "You have",
     "youNeed": "You need to buy",
     "cookingTime": "{time} min",
-    "selectRecipe": "Select this recipe",
+    "selectRecipe": "Select recipe",
     "selected": "Selected",
     "shoppingListTitle": "Shopping List",
     "purchased": "{checked}/{total} purchased",
@@ -267,7 +273,7 @@
     "servings": "{count, plural, one {# serving} other {# servings}}",
     "customNotesTitle": "Additional Notes",
     "customNotesDescription": "Free-text notes about allergies or dietary needs not covered by the lists above.",
-    "customNotesPlaceholder": "e.g. I am intolerant to nightshades (tomatoes, peppers, eggplant)",
+    "customNotesPlaceholder": "I am intolerant to nightshades (tomatoes, peppers, eggplant)",
     "customNotesCount": "{count}/500",
     "saveButton": "Save Preferences",
     "saving": "Saving...",
@@ -316,7 +322,7 @@
     "addTitle": "Add Category",
     "addDescription": "Create a custom category for your shopping lists",
     "namePlaceholder": "Category name",
-    "iconPlaceholder": "Icon (emoji)",
+    "iconPlaceholder": "emoji",
     "addButton": "Add",
     "editButton": "Edit",
     "deleteButton": "Delete",
@@ -520,6 +526,7 @@
     "removeRecipeConfirm": "Remove",
     "removeRecipeCancel": "Cancel",
     "addRecipe": "Add Recipe",
+    "createRecipe": "Create recipe",
     "addRecipeTitle": "Add Recipes",
     "addRecipeDescription": "Select recipes from your saved collection to add to this plan.",
     "addRecipeConfirm": "Add ({count})",
@@ -546,7 +553,10 @@
     "recipeTitlePlaceholder": "Recipe title",
     "recipeTextPlaceholder": "Recipe text — ingredients, steps...",
     "newRecipeAdd": "Add",
-    "newRecipeSource": "New"
+    "newRecipeSource": "New",
+    "changeDayLabel": "Change day",
+    "dayOption": "Day {day}",
+    "dayChanged": "Recipe moved to day {day}"
   },
   "ManualRecipe": {
     "heading": "Manual Recipe",

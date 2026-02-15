@@ -142,7 +142,7 @@
     "subtitle": "Опишіть страву, і ми згенеруємо рецепт з інгредієнтами.",
     "queryTitle": "Опишіть вашу страву",
     "queryDescription": "Розкажіть, що хочете приготувати — назву страви та кількість людей",
-    "placeholder": "Борщ на 4 людини",
+    "placeholder": "Борщ на 2 людини",
     "generating": "Генерація...",
     "generateButton": "Згенерувати рецепт",
     "unexpectedError": "Сталася неочікувана помилка.",
@@ -167,14 +167,17 @@
     "categoryPlaceholder": "Категорія",
     "addIngredient": "Додати інгредієнт",
     "addStep": "Додати крок",
-    "stepPlaceholder": "Опис кроку"
+    "stepPlaceholder": "Опис кроку",
+    "selectRecipe": "Обрати рецепт",
+    "selected": "Обрано",
+    "recipesFound": "{count, plural, one {# рецепт} few {# рецепти} many {# рецептів} other {# рецептів}}"
   },
   "MealPlanner": {
     "heading": "План харчування",
     "subtitle": "Опишіть ваш план — кількість людей, днів, дієтичні вподобання, і ми згенеруємо рецепти.",
     "queryTitle": "Опишіть ваш план",
     "queryDescription": "Розкажіть, що хочете приготувати — кількість людей, днів, дієтичні вподобання",
-    "placeholder": "Вегетаріанське меню на 2 особи на 3 дні",
+    "placeholder": "Сніданки без лактози на 3 дні для 2 осіб",
     "generating": "Генерація...",
     "generateButton": "Згенерувати план",
     "unexpectedError": "Сталася неочікувана помилка.",
@@ -213,7 +216,10 @@
     "planNamePlaceholder": "Назва плану (необов'язково)",
     "cancel": "Скасувати",
     "savePlanConfirm": "Зберегти",
-    "defaultPlanName": "План харчування {date}"
+    "defaultPlanName": "План харчування {date}",
+    "dayTitle": "День {day}",
+    "selectRecipe": "Обрати рецепт",
+    "selected": "Обрано"
   },
   "RecipeSuggester": {
     "heading": "Підбір рецептів",
@@ -230,7 +236,7 @@
     "youHave": "У вас є",
     "youNeed": "Потрібно докупити",
     "cookingTime": "{time} хв",
-    "selectRecipe": "Обрати цей рецепт",
+    "selectRecipe": "Обрати рецепт",
     "selected": "Обрано",
     "shoppingListTitle": "Список покупок",
     "purchased": "{checked}/{total} куплено",
@@ -267,7 +273,7 @@
     "servings": "{count, plural, one {# порція} few {# порції} many {# порцій} other {# порцій}}",
     "customNotesTitle": "Додаткові нотатки",
     "customNotesDescription": "Вільний текст про алергії чи дієтичні потреби, які не охоплені списками вище.",
-    "customNotesPlaceholder": "напр. Я не переношу пасльонові (помідори, перець, баклажани)",
+    "customNotesPlaceholder": "Я не переношу пасльонові (помідори, перець, баклажани)",
     "customNotesCount": "{count}/500",
     "saveButton": "Зберегти вподобання",
     "saving": "Збереження...",
@@ -316,7 +322,7 @@
     "addTitle": "Додати категорію",
     "addDescription": "Створіть власну категорію для списків покупок",
     "namePlaceholder": "Назва категорії",
-    "iconPlaceholder": "Іконка (емодзі)",
+    "iconPlaceholder": "емодзі",
     "addButton": "Додати",
     "editButton": "Редагувати",
     "deleteButton": "Видалити",
@@ -520,6 +526,7 @@
     "removeRecipeConfirm": "Видалити",
     "removeRecipeCancel": "Скасувати",
     "addRecipe": "Додати рецепт",
+    "createRecipe": "Створити рецепт",
     "addRecipeTitle": "Додати рецепти",
     "addRecipeDescription": "Оберіть рецепти зі збережених, щоб додати до плану.",
     "addRecipeConfirm": "Додати ({count})",
@@ -546,7 +553,10 @@
     "recipeTitlePlaceholder": "Назва рецепту",
     "recipeTextPlaceholder": "Текст рецепту — інгредієнти, кроки...",
     "newRecipeAdd": "Додати",
-    "newRecipeSource": "Новий"
+    "newRecipeSource": "Новий",
+    "changeDayLabel": "Змінити день",
+    "dayOption": "День {day}",
+    "dayChanged": "Рецепт переміщено на день {day}"
   },
   "ManualRecipe": {
     "heading": "Власний рецепт",

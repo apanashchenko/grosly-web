@@ -346,7 +346,7 @@ export function RecipeSuggester() {
                   highlightIngredients={edited.matchedIngredients}
                   defaultOpen={false}
                   categoryMap={categoryMap}
-                  {...(isDone && {
+                  {...(isDone && isSelected && {
                     cookingTime: edited.cookingTime,
                     onEditCookingTime: (time: number) => updateRecipe(index, (r) => ({ ...r, cookingTime: time })),
                     onEditDishName: (name: string) => updateRecipe(index, (r) => ({ ...r, dishName: name })),
@@ -401,21 +401,22 @@ export function RecipeSuggester() {
                             ))}
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex gap-2">
                           <Button
+                            size="sm"
                             variant={isSelected ? "secondary" : "default"}
                             onClick={() => selectRecipe(index)}
                           >
                             {isSelected ? (
                               <Check className="size-4" />
                             ) : (
-                              <ShoppingCart className="size-4" />
+                              <Sparkles className="size-4" />
                             )}
                             {isSelected ? t("selected") : t("selectRecipe")}
                           </Button>
                           {savedRecipeIndexes.has(index) ? (
                             <Button variant="outline" size="sm" asChild>
-                              <Link href="/recipes">
+                              <Link href="/recipes" prefetch={false}>
                                 <Check className="size-4" />
                                 {tSave("recipeSaved")}
                               </Link>
@@ -423,6 +424,7 @@ export function RecipeSuggester() {
                           ) : (
                             <Button
                               variant="outline"
+                              size="sm"
                               onClick={() => {
                                 setRecipeToSave(index)
                                 setSaveDialogOpen(true)
@@ -440,6 +442,14 @@ export function RecipeSuggester() {
               </div>
             )
           })}
+
+          {stream.isStreaming && displayRecipes.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 py-4">
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary" />
+            </div>
+          )}
 
           {stream.result && stream.result.suggestedRecipes.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
@@ -482,7 +492,7 @@ export function RecipeSuggester() {
                     {t("savedSuccess")}
                   </Badge>
                   <Button variant="link" size="sm" asChild>
-                    <Link href="/shopping-list">
+                    <Link href="/shopping-list" prefetch={false}>
                       <ShoppingCart className="size-4" />
                       {t("viewShoppingLists")}
                     </Link>

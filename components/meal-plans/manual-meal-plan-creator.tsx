@@ -180,9 +180,9 @@ export function ManualMealPlanCreator() {
       })
 
       if (selectedIds.length > 0) {
-        const createdIds = plan.recipes.map((r) => r.recipeId)
+        const created = plan.recipes.map((r) => ({ recipeId: r.recipeId, dayNumber: r.dayNumber }))
         await updateMealPlan(plan.id, {
-          recipes: [...createdIds, ...selectedIds],
+          recipes: [...created, ...selectedIds.map((id) => ({ recipeId: id }))],
         })
       }
 

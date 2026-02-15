@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ArrowLeft,
+  CalendarDays,
   Check,
   ClipboardList,
   Loader2,
@@ -70,6 +71,7 @@ import {
 import {
   UNITS,
   type Category,
+  type MealPlanResponse,
   type RecipeIngredientResponse,
   type SavedRecipeResponse,
   type UpdateRecipeIngredientRequest,
@@ -116,6 +118,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
 
   const [planPickerOpen, setPlanPickerOpen] = useState(false)
   const [removingFromPlanId, setRemovingFromPlanId] = useState<string | null>(null)
+  const [planDetails, setPlanDetails] = useState<Map<string, MealPlanResponse>>(new Map())
 
   // Recipe editing state
   const [editingTitle, setEditingTitle] = useState(false)
@@ -155,6 +158,27 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   useEffect(() => {
     fetchRecipe()
   }, [fetchRecipe])
+
+  // Fetch meal plan details to show day selectors
+  useEffect(() => {
+    if (!recipe || recipe.mealPlans.length === 0) return
+    const idsToFetch = recipe.mealPlans
+      .map((p) => p.id)
+      .filter((id) => !planDetails.has(id))
+    if (idsToFetch.length === 0) return
+    Promise.all(idsToFetch.map((id) => getMealPlan(id).catch(() => null))).then(
+      (results) => {
+        setPlanDetails((prev) => {
+          const next = new Map(prev)
+          for (const plan of results) {
+            if (plan) next.set(plan.id, plan)
+          }
+          return next
+        })
+      }
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe?.mealPlans])
 
   function formatQty(quantity: number, unit: string): string {
     const label = UNITS.includes(unit as (typeof UNITS)[number])
@@ -325,6 +349,48 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
+  async function handleChangeDayNumber(planId: string, newDay: number) {
+    const plan = planDetails.get(planId)
+    if (!plan) return
+    const prevRecipes = plan.recipes
+    // Optimistic update
+    setPlanDetails((prev) => {
+      const next = new Map(prev)
+      const p = next.get(planId)
+      if (p) {
+        next.set(planId, {
+          ...p,
+          recipes: p.recipes.map((r) =>
+            r.recipeId === recipeId ? { ...r, dayNumber: newDay } : r
+          ),
+        })
+      }
+      return next
+    })
+    try {
+      const updated = await updateMealPlan(planId, {
+        recipes: plan.recipes.map((r) => ({
+          recipeId: r.recipeId,
+          dayNumber: r.recipeId === recipeId ? newDay : r.dayNumber,
+        })),
+      })
+      setPlanDetails((prev) => {
+        const next = new Map(prev)
+        next.set(planId, updated)
+        return next
+      })
+      toast.success(tPlans("dayChanged", { day: newDay }))
+    } catch {
+      // Rollback
+      setPlanDetails((prev) => {
+        const next = new Map(prev)
+        const p = next.get(planId)
+        if (p) next.set(planId, { ...p, recipes: prevRecipes })
+        return next
+      })
+    }
+  }
+
   async function handleRemoveFromPlan(planId: string) {
     if (!recipe) return
     setRemovingFromPlanId(planId)
@@ -332,13 +398,18 @@ export function SavedRecipeDetail({ recipeId }: Props) {
       const plan = await getMealPlan(planId)
       const remaining = plan.recipes
         .filter((r) => r.recipeId !== recipeId)
-        .map((r) => r.recipeId)
+        .map((r) => ({ recipeId: r.recipeId, dayNumber: r.dayNumber }))
       await updateMealPlan(planId, { recipes: remaining })
       setRecipe((prev) =>
         prev
           ? { ...prev, mealPlans: prev.mealPlans.filter((p) => p.id !== planId) }
           : prev
       )
+      setPlanDetails((prev) => {
+        const next = new Map(prev)
+        next.delete(planId)
+        return next
+      })
       toast.success(t("removedFromPlanToast"))
     } catch {
       // keep as-is
@@ -394,7 +465,35 @@ export function SavedRecipeDetail({ recipeId }: Props) {
             <div className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {recipe.mealPlans.map((mp) => {
+                      const detail = planDetails.get(mp.id)
+                      const recipeInPlan = detail?.recipes.find((r) => r.recipeId === recipeId)
+                      if (!detail || detail.numberOfDays <= 1 || !recipeInPlan) return null
+                      return (
+                        <Select
+                          key={mp.id}
+                          value={String(recipeInPlan.dayNumber)}
+                          onValueChange={(val) => handleChangeDayNumber(mp.id, Number(val))}
+                        >
+                          <SelectTrigger className="h-5 w-auto gap-1 rounded-4xl border-border bg-transparent px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted">
+                            <CalendarDays className="size-3" />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent position="popper" align="start" className="min-w-0 p-0.5">
+                            {Array.from({ length: detail.numberOfDays }, (_, i) => i + 1).map(
+                              (day) => (
+                                <SelectItem key={day} value={String(day)} className="text-xs py-0.5 pr-6 pl-1.5 rounded-md">
+                                  {tPlans("dayOption", { day })}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )
+                    })}
+                  </div>
                   <Badge
                     variant="outline"
                     className={`text-xs ${SOURCE_STYLES[recipe.source] ?? ""}`}
@@ -451,19 +550,19 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 {recipe.mealPlans.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     <span className="text-xs text-muted-foreground">{t("inMealPlans")}:</span>
-                    {recipe.mealPlans.map((plan) => (
-                      <Badge key={plan.id} variant="outline" className="gap-1 text-xs">
-                        <Link href={`/meal-plans/${plan.id}`} className="flex items-center gap-1 hover:underline">
+                    {recipe.mealPlans.map((mp) => (
+                      <Badge key={mp.id} variant="outline" className="gap-1 text-xs">
+                        <Link href={`/meal-plans/${mp.id}`} className="flex items-center gap-1 hover:underline">
                           <ClipboardList className="size-3" />
-                          {plan.name}
+                          {mp.name}
                         </Link>
                         <button
                           type="button"
                           disabled={removingFromPlanId !== null}
-                          onClick={() => handleRemoveFromPlan(plan.id)}
+                          onClick={() => handleRemoveFromPlan(mp.id)}
                           className="ml-0.5 rounded-full p-0.5 hover:bg-muted transition-colors disabled:opacity-50"
                         >
-                          {removingFromPlanId === plan.id ? (
+                          {removingFromPlanId === mp.id ? (
                             <Loader2 className="size-3 animate-spin" />
                           ) : (
                             <X className="size-3" />
@@ -622,41 +721,45 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                         </form>
                       ) : (
                         <div key={ing.id} className="py-2">
-                          <div className="flex items-center gap-2">
-                            <span className="flex-1 min-w-0 font-medium truncate text-sm pl-2">{ing.name}</span>
-                            {ing.category && (
-                              <Badge variant="outline" className="shrink-0 text-[11px]">
-                                {ing.category.icon ? `${ing.category.icon} ` : ""}
-                                {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-end gap-1 mt-0.5">
-                            <Badge variant="secondary" className="tabular-nums">
-                              {formatQty(ing.quantity, ing.unit)}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => startEditIngredient(ing)}
-                              disabled={editingIngId !== null || deletingIngId !== null}
-                              className="text-muted-foreground/40 hover:text-muted-foreground"
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => handleDeleteIngredient(ing.id)}
-                              disabled={editingIngId !== null || deletingIngId !== null}
-                              className="text-destructive/60 hover:text-destructive"
-                            >
-                              {deletingIngId === ing.id ? (
-                                <Loader2 className="size-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="size-3.5" />
+                          <div className="flex items-stretch gap-2">
+                            <span className="flex flex-1 flex-col justify-center min-w-0 pl-2">
+                              <span className="font-medium truncate text-sm">{ing.name}</span>
+                            </span>
+                            <div className="ml-auto shrink-0 flex flex-col items-end gap-0.5 justify-between">
+                              {ing.category && (
+                                <Badge variant="outline" className="shrink-0 text-[11px]">
+                                  {ing.category.icon ? `${ing.category.icon} ` : ""}
+                                  {localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}
+                                </Badge>
                               )}
-                            </Button>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="secondary" className="tabular-nums">
+                                  {formatQty(ing.quantity, ing.unit)}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => startEditIngredient(ing)}
+                                  disabled={editingIngId !== null || deletingIngId !== null}
+                                  className="text-muted-foreground/40 hover:text-muted-foreground"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDeleteIngredient(ing.id)}
+                                  disabled={editingIngId !== null || deletingIngId !== null}
+                                  className="text-destructive/60 hover:text-destructive"
+                                >
+                                  {deletingIngId === ing.id ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="size-3.5" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                           {ing.note && (
                             <p className="pt-1 px-1 text-xs text-muted-foreground leading-snug">

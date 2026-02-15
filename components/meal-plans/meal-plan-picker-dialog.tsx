@@ -67,9 +67,9 @@ export function MealPlanPickerDialog({
     setAddingToPlanId(planId)
     try {
       const plan = await getMealPlan(planId)
-      const existingIds = plan.recipes.map((r) => r.recipeId)
+      const existing = plan.recipes.map((r) => ({ recipeId: r.recipeId, dayNumber: r.dayNumber }))
       await updateMealPlan(planId, {
-        recipes: [...existingIds, recipeId],
+        recipes: [...existing, { recipeId }],
       })
       toast.success(t("addedToPlanToast"))
       onOpenChange(false)

@@ -65,6 +65,7 @@ export function RecipePickerDialog({
     (params, signal) => getSavedRecipes(params, signal),
     [open],
     t("unexpectedError"),
+    { enabled: open },
   )
 
   // Reset selection when dialog opens

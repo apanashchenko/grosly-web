@@ -11,7 +11,7 @@ import {
   ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { UNITS, type SingleRecipeResponse, type GeneratedRecipe } from "@/lib/types"
+import { UNITS, type SingleRecipeResponse, type GeneratedRecipe, type RecipeIngredient } from "@/lib/types"
 import { generateSingleRecipe, streamSingleRecipe, saveRecipe, createShoppingList } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
@@ -53,12 +53,13 @@ export function RecipeGenerator() {
   const { localizeCategoryName } = useCategoryLocalization()
 
   const [query, setQuery] = useState("")
-  const [editedRecipe, setEditedRecipe] = useState<GeneratedRecipe | null>(null)
-  const [editedPeople, setEditedPeople] = useState<number | null>(null)
   const [queryOpen, setQueryOpen] = useState(true)
+  const [selectedRecipeIndex, setSelectedRecipeIndex] = useState<number | null>(null)
+  const [editedRecipes, setEditedRecipes] = useState<Map<number, GeneratedRecipe>>(new Map())
+  const [editedPeople, setEditedPeople] = useState<number | null>(null)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
-  const [recipeSaved, setRecipeSaved] = useState(false)
+  const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
   const [createListDialogOpen, setCreateListDialogOpen] = useState(false)
   const [listName, setListName] = useState("")
   const [savingList, setSavingList] = useState(false)
@@ -71,11 +72,14 @@ export function RecipeGenerator() {
     return () => abort()
   }, [abort])
 
-  // Initialize editedRecipe when stream finishes
+  // Reset selection state when stream finishes
   useEffect(() => {
     if (stream.result) {
-      setEditedRecipe(structuredClone(stream.result.recipe))
+      setSelectedRecipeIndex(null)
+      setEditedRecipes(new Map())
       setEditedPeople(stream.result.numberOfPeople)
+      setSavedRecipeIndexes(new Set())
+      setSavedSuccess(false)
     }
   }, [stream.result])
 
@@ -83,8 +87,25 @@ export function RecipeGenerator() {
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
+  function getEditedRecipe(index: number): GeneratedRecipe {
+    return editedRecipes.get(index) ?? displayRecipes[index]
+  }
+
+  function updateRecipe(index: number, updater: (r: GeneratedRecipe) => GeneratedRecipe) {
+    const base = editedRecipes.get(index) ?? structuredClone(displayRecipes[index])
+    if (!base) return
+    setEditedRecipes((prev) => new Map(prev).set(index, updater(base)))
+  }
+
+  function selectRecipe(index: number) {
+    setSelectedRecipeIndex(index === selectedRecipeIndex ? null : index)
+    setSavedSuccess(false)
+    setListName("")
+  }
+
   async function handleSaveRecipe(opts: { title: string }) {
-    const recipe = editedRecipe ?? stream.result?.recipe
+    if (selectedRecipeIndex === null) return
+    const recipe = getEditedRecipe(selectedRecipeIndex)
     if (!recipe) return
 
     setSavingRecipe(true)
@@ -102,7 +123,7 @@ export function RecipeGenerator() {
           ...(ing.note && { note: ing.note }),
         })),
       })
-      setRecipeSaved(true)
+      setSavedRecipeIndexes((prev) => new Set(prev).add(selectedRecipeIndex))
       setSaveDialogOpen(false)
     } catch {
       // save error handled silently
@@ -112,7 +133,8 @@ export function RecipeGenerator() {
   }
 
   async function handleCreateList() {
-    const recipe = editedRecipe ?? stream.result?.recipe
+    if (selectedRecipeIndex === null) return
+    const recipe = getEditedRecipe(selectedRecipeIndex)
     if (!recipe) return
 
     setSavingList(true)
@@ -137,10 +159,11 @@ export function RecipeGenerator() {
   }
 
   function handleGenerate() {
-    setRecipeSaved(false)
+    setSavedRecipeIndexes(new Set())
     setSavedSuccess(false)
     setListName("")
-    setEditedRecipe(null)
+    setSelectedRecipeIndex(null)
+    setEditedRecipes(new Map())
     setEditedPeople(null)
     stream.start(
       (callbacks, signal) =>
@@ -149,21 +172,19 @@ export function RecipeGenerator() {
     )
   }
 
-  // Use edited recipe when available, otherwise partial during streaming, full result after done
-  const partialRecipe = stream.partial?.recipe
-  const displayRecipe = editedRecipe ?? stream.result?.recipe ?? partialRecipe
+  // Use partial data during streaming, full result after done
+  const partialRecipes = stream.partial?.recipes ?? []
+  const displayRecipes = stream.result?.recipes ?? partialRecipes
   const displayPeople = editedPeople ?? stream.result?.numberOfPeople ?? stream.partial?.numberOfPeople
   const isDone = !!stream.result
 
-  // Auto-scroll to bottom during streaming as new content appears
+  // Auto-scroll only when a new recipe card appears, not on content changes within cards
   const resultsEndRef = useRef<HTMLDivElement>(null)
-  const ingCount = displayRecipe?.ingredients?.length ?? 0
-  const instrCount = displayRecipe?.instructions?.length ?? 0
   useEffect(() => {
-    if (stream.isStreaming) {
+    if (stream.isStreaming && displayRecipes.length > 0) {
       resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
-  }, [stream.isStreaming, ingCount, instrCount])
+  }, [stream.isStreaming, displayRecipes.length])
   // Final scroll when stream completes to show footer actions
   useEffect(() => {
     if (stream.result) {
@@ -242,111 +263,150 @@ export function RecipeGenerator() {
           )}
         </Card>
 
-        {/* Right column — result */}
-        <div className="space-y-6">
+        {/* Right column — results */}
+        <div className="relative space-y-6">
           {/* Streaming status */}
-          {stream.isStreaming && !partialRecipe && (
+          {stream.isStreaming && !partialRecipes.length && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="size-4 animate-pulse text-primary" />
               <span className="animate-pulse">{t("streamingMessage")}</span>
             </div>
           )}
 
-          {/* Recipe card — renders during streaming (partial) and after done (full) */}
-          {displayRecipe?.dishName && (
-            <RecipeCard
-              dishName={displayRecipe.dishName}
-              description={displayRecipe.description ?? ""}
-              peopleLabel={
-                displayPeople && displayPeople > 0
-                  ? t("people", { count: displayPeople })
-                  : undefined
-              }
-              cookingTimeLabel={
-                displayRecipe.cookingTime
-                  ? t("cookingTime", { time: displayRecipe.cookingTime })
-                  : undefined
-              }
-              ingredients={displayRecipe.ingredients ?? []}
-              instructions={displayRecipe.instructions ?? []}
-              instructionsLabel={t("instructionsLabel")}
-              defaultOpen={true}
-              categoryMap={categoryMap}
-              {...(isDone && {
-                cookingTime: displayRecipe.cookingTime,
-                people: displayPeople,
-                onEditCookingTime: (time: number) => setEditedRecipe((r) => r ? { ...r, cookingTime: time } : r),
-                onEditPeople: (p: number) => setEditedPeople(p),
-                onEditDishName: (name) => setEditedRecipe((r) => r ? { ...r, dishName: name } : r),
-                onEditDescription: (desc) => setEditedRecipe((r) => r ? { ...r, description: desc } : r),
-                onEditIngredient: (idx, data) => setEditedRecipe((r) => r ? { ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) } : r),
-                onDeleteIngredient: (idx) => setEditedRecipe((r) => r ? { ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) } : r),
-                onAddIngredient: (data) => setEditedRecipe((r) => r ? { ...r, ingredients: [...r.ingredients, data] } : r),
-                onEditInstruction: (idx, text) => setEditedRecipe((r) => r ? { ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) } : r),
-                onDeleteInstruction: (idx) => setEditedRecipe((r) => r ? { ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) } : r),
-                onAddInstruction: (text) => setEditedRecipe((r) => r ? { ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] } : r),
-                unitOptions,
-                categoryOptions,
-                ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
-                qtyPlaceholder: t("qtyPlaceholder"),
-                unitPlaceholder: t("unitPlaceholder"),
-                categoryPlaceholder: t("categoryPlaceholder"),
-                addIngredientLabel: t("addIngredient"),
-                addStepLabel: t("addStep"),
-                stepPlaceholder: t("stepPlaceholder"),
-              })}
-              footer={
-                stream.result ? (
-                  <div className="flex flex-col gap-3 w-full">
-                    {recipeSaved ? (
-                      <div className="flex items-center gap-2">
-                        <Check className="size-4 text-primary" />
-                        <Button variant="link" size="sm" asChild>
-                          <Link href="/recipes">
-                            <Bookmark className="size-4" />
-                            {tSave("viewSavedRecipes")}
-                          </Link>
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => setSaveDialogOpen(true)}
-                        className="w-full"
-                      >
-                        <Bookmark className="size-4" />
-                        {tSave("saveRecipe")}
-                      </Button>
-                    )}
-
-                    <div className="border-t pt-3">
-                      {savedSuccess ? (
-                        <div className="flex items-center gap-2">
-                          <Check className="size-4 text-primary" />
-                          <Button variant="link" size="sm" asChild>
-                            <Link href="/shopping-list">
-                              <ShoppingCart className="size-4" />
-                              {t("viewShoppingLists")}
-                            </Link>
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          onClick={() => setCreateListDialogOpen(true)}
-                          className="w-full"
-                        >
-                          <ShoppingCart className="size-4" />
-                          {t("createShoppingList")}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ) : undefined
-              }
-            />
+          {isDone && displayRecipes.length > 0 && (
+            <span className="absolute -top-5 right-0 text-xs text-muted-foreground">
+              {t("recipesFound", { count: displayRecipes.length })}
+            </span>
           )}
 
-          {stream.result && stream.result.recipe.ingredients.length === 0 && (
+          {displayRecipes.map((recipe, index) => {
+            if (!recipe.dishName) return null
+            const edited = getEditedRecipe(index)
+            const isSelected = selectedRecipeIndex === index
+            return (
+              <div key={index} className="space-y-3">
+                <RecipeCard
+                  dishName={edited.dishName}
+                  description={edited.description ?? ""}
+                  peopleLabel={
+                    displayPeople && displayPeople > 0
+                      ? t("people", { count: displayPeople })
+                      : undefined
+                  }
+                  cookingTimeLabel={
+                    edited.cookingTime
+                      ? t("cookingTime", { time: edited.cookingTime })
+                      : undefined
+                  }
+                  ingredients={edited.ingredients ?? []}
+                  instructions={edited.instructions ?? []}
+                  instructionsLabel={t("instructionsLabel")}
+                  defaultOpen={isSelected}
+                  categoryMap={categoryMap}
+                  {...(isDone && isSelected && {
+                    cookingTime: edited.cookingTime,
+                    people: displayPeople,
+                    onEditCookingTime: (time: number) => updateRecipe(index, (r) => ({ ...r, cookingTime: time })),
+                    onEditPeople: (p: number) => setEditedPeople(p),
+                    onEditDishName: (name: string) => updateRecipe(index, (r) => ({ ...r, dishName: name })),
+                    onEditDescription: (desc: string) => updateRecipe(index, (r) => ({ ...r, description: desc })),
+                    onEditIngredient: (idx: number, data: RecipeIngredient) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) })),
+                    onDeleteIngredient: (idx: number) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) })),
+                    onAddIngredient: (data: RecipeIngredient) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: [...r.ingredients, data] })),
+                    onEditInstruction: (idx: number, text: string) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) })),
+                    onDeleteInstruction: (idx: number) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) })),
+                    onAddInstruction: (text: string) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] })),
+                    unitOptions,
+                    categoryOptions,
+                    ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
+                    qtyPlaceholder: t("qtyPlaceholder"),
+                    unitPlaceholder: t("unitPlaceholder"),
+                    categoryPlaceholder: t("categoryPlaceholder"),
+                    addIngredientLabel: t("addIngredient"),
+                    addStepLabel: t("addStep"),
+                    stepPlaceholder: t("stepPlaceholder"),
+                  })}
+                  footer={
+                    isDone ? (
+                      <div className="flex w-full flex-col gap-3">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={isSelected ? "secondary" : "default"}
+                            onClick={() => selectRecipe(index)}
+                          >
+                            {isSelected ? (
+                              <Check className="size-4" />
+                            ) : (
+                              <Sparkles className="size-4" />
+                            )}
+                            {isSelected ? t("selected") : t("selectRecipe")}
+                          </Button>
+                          {savedRecipeIndexes.has(index) ? (
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/recipes" prefetch={false}>
+                                <Check className="size-4" />
+                                {tSave("recipeSaved")}
+                              </Link>
+                            </Button>
+                          ) : isSelected ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSaveDialogOpen(true)}
+                            >
+                              <Bookmark className="size-4" />
+                              {tSave("saveRecipe")}
+                            </Button>
+                          ) : null}
+                        </div>
+
+                        {isSelected && (
+                          <div className="border-t pt-3">
+                            {savedSuccess ? (
+                              <div className="flex items-center gap-2">
+                                <Check className="size-4 text-primary" />
+                                <Button variant="link" size="sm" asChild>
+                                  <Link href="/shopping-list" prefetch={false}>
+                                    <ShoppingCart className="size-4" />
+                                    {t("viewShoppingLists")}
+                                  </Link>
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={() => setCreateListDialogOpen(true)}
+                                className="w-full"
+                              >
+                                <ShoppingCart className="size-4" />
+                                {t("createShoppingList")}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : undefined
+                  }
+                />
+              </div>
+            )
+          })}
+
+          {stream.isStreaming && displayRecipes.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 py-4">
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary" />
+            </div>
+          )}
+
+          {stream.result && displayRecipes.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Sparkles className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">
@@ -363,7 +423,11 @@ export function RecipeGenerator() {
         onOpenChange={setSaveDialogOpen}
         onSave={handleSaveRecipe}
         saving={savingRecipe}
-        defaultTitle={editedRecipe?.dishName ?? stream.result?.recipe.dishName ?? ""}
+        defaultTitle={
+          selectedRecipeIndex !== null
+            ? getEditedRecipe(selectedRecipeIndex)?.dishName ?? ""
+            : ""
+        }
       />
 
       <Dialog open={createListDialogOpen} onOpenChange={setCreateListDialogOpen}>

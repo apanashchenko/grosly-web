@@ -19,6 +19,7 @@ export function usePaginatedList<T>(
   fetcher: (params: PaginationParams, signal?: AbortSignal) => Promise<PaginatedResponse<T>>,
   deps: unknown[],
   errorMessage = "Something went wrong",
+  { enabled = true }: { enabled?: boolean } = {},
 ): UsePaginatedListReturn<T> {
   const [items, setItems] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,6 +36,11 @@ export function usePaginatedList<T>(
 
   // Fetch first page (AbortController cancels duplicate request in React Strict Mode)
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
+
     const controller = new AbortController()
 
     async function fetchFirstPage() {
@@ -60,7 +66,7 @@ export function usePaginatedList<T>(
       controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, resetKey])
+  }, [...deps, resetKey, enabled])
 
   // Load next page
   const loadMore = useCallback(async () => {

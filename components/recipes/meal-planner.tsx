@@ -56,8 +56,10 @@ export function MealPlanner() {
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [planName, setPlanName] = useState("")
-  const [includedRecipes, setIncludedRecipes] = useState<Set<number>>(new Set())
-  const [editedRecipes, setEditedRecipes] = useState<Map<number, GeneratedRecipe>>(new Map())
+  // dayNumber → Set of selected recipe indexes within that day
+  const [selectedRecipes, setSelectedRecipes] = useState<Map<number, Set<number>>>(new Map())
+  // "dayNumber-recipeIndex" → edited recipe
+  const [editedRecipes, setEditedRecipes] = useState<Map<string, GeneratedRecipe>>(new Map())
 
   const stream = useStream<GeneratedMealPlanResponse>()
   const { abort } = stream
@@ -66,10 +68,15 @@ export function MealPlanner() {
     return () => abort()
   }, [abort])
 
+  // Auto-select all recipes when stream finishes
   useEffect(() => {
     if (stream.result) {
-      setIncludedRecipes(new Set(stream.result.recipes.map((_, i) => i)))
-      setEditedRecipes(new Map(stream.result.recipes.map((r, i) => [i, structuredClone(r)])))
+      const allSelected = new Map<number, Set<number>>()
+      for (const day of stream.result.days) {
+        allSelected.set(day.dayNumber, new Set(day.recipes.map((_, i) => i)))
+      }
+      setSelectedRecipes(allSelected)
+      setEditedRecipes(new Map())
     }
   }, [stream.result])
 
@@ -77,22 +84,63 @@ export function MealPlanner() {
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
-  function getEditedRecipe(index: number): GeneratedRecipe {
-    return editedRecipes.get(index) ?? stream.result!.recipes[index]
+  function recipeKey(dayNumber: number, recipeIndex: number) {
+    return `${dayNumber}-${recipeIndex}`
   }
 
-  function updateRecipe(index: number, updater: (r: GeneratedRecipe) => GeneratedRecipe) {
+  function getEditedRecipe(dayNumber: number, recipeIndex: number, original: GeneratedRecipe): GeneratedRecipe {
+    return editedRecipes.get(recipeKey(dayNumber, recipeIndex)) ?? original
+  }
+
+  function updateRecipe(dayNumber: number, recipeIndex: number, original: GeneratedRecipe, updater: (r: GeneratedRecipe) => GeneratedRecipe) {
+    const key = recipeKey(dayNumber, recipeIndex)
     setEditedRecipes((prev) => {
       const next = new Map(prev)
-      const current = next.get(index) ?? stream.result!.recipes[index]
-      next.set(index, updater(current))
+      const current = next.get(key) ?? structuredClone(original)
+      next.set(key, updater(current))
       return next
     })
   }
 
+  function isRecipeSelected(dayNumber: number, recipeIndex: number) {
+    return selectedRecipes.get(dayNumber)?.has(recipeIndex) ?? false
+  }
+
+  function toggleRecipe(dayNumber: number, recipeIndex: number) {
+    setSelectedRecipes((prev) => {
+      const next = new Map(prev)
+      const daySet = new Set(next.get(dayNumber) ?? [])
+      if (daySet.has(recipeIndex)) {
+        daySet.delete(recipeIndex)
+      } else {
+        daySet.add(recipeIndex)
+      }
+      next.set(dayNumber, daySet)
+      return next
+    })
+  }
+
+  function toggleDay(dayNumber: number, totalRecipes: number) {
+    setSelectedRecipes((prev) => {
+      const next = new Map(prev)
+      const daySet = next.get(dayNumber)
+      const allSelected = daySet?.size === totalRecipes
+      if (allSelected) {
+        next.set(dayNumber, new Set())
+      } else {
+        next.set(dayNumber, new Set(Array.from({ length: totalRecipes }, (_, i) => i)))
+      }
+      return next
+    })
+  }
+
+  // Total count of selected recipes across all days
+  const totalSelectedCount = Array.from(selectedRecipes.values()).reduce((sum, s) => sum + s.size, 0)
+
   function handleGenerate() {
     setSavedPlanId(null)
     setEditedRecipes(new Map())
+    setSelectedRecipes(new Map())
     stream.start(
       (callbacks, signal) =>
         streamMealPlan(query, locale, callbacks, signal),
@@ -100,32 +148,34 @@ export function MealPlanner() {
     )
   }
 
-  function toggleRecipe(index: number) {
-    setIncludedRecipes((prev) => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
-    })
-  }
-
   async function handleSavePlan() {
-    if (!stream.result || includedRecipes.size === 0) return
+    if (!stream.result || totalSelectedCount === 0) return
     setSavingPlan(true)
     try {
-      const selected = stream.result.recipes
-        .map((_, i) => getEditedRecipe(i))
-        .filter((_, i) => includedRecipes.has(i))
+      const recipes: { recipe: GeneratedRecipe; dayNumber: number }[] = []
+      for (const day of stream.result.days) {
+        const daySelected = selectedRecipes.get(day.dayNumber)
+        if (!daySelected) continue
+        for (const ri of daySelected) {
+          if (day.recipes[ri]) {
+            recipes.push({
+              recipe: getEditedRecipe(day.dayNumber, ri, day.recipes[ri]),
+              dayNumber: day.dayNumber,
+            })
+          }
+        }
+      }
       const plan = await createMealPlan({
         name: planName.trim() || t("defaultPlanName", { date: new Date().toLocaleDateString("sv-SE") }),
         numberOfDays: stream.result.parsedRequest.numberOfDays,
         numberOfPeople: stream.result.parsedRequest.numberOfPeople,
         ...(stream.result.description && { description: stream.result.description }),
         originalInput: query,
-        recipes: selected.map((recipe) => ({
+        recipes: recipes.map(({ recipe, dayNumber }) => ({
           title: recipe.dishName,
           source: "GENERATED" as const,
           text: serializeRecipeText(recipe),
+          dayNumber,
           ingredients: recipe.ingredients.map((ing) => ({
             name: ing.name,
             quantity: ing.quantity,
@@ -146,18 +196,19 @@ export function MealPlanner() {
   }
 
   // Use partial data during streaming, full result after done
-  const partialRecipes = stream.partial?.recipes ?? []
-  const displayRecipes = stream.result?.recipes ?? partialRecipes
+  const partialDays = stream.partial?.days ?? []
+  const displayDays = stream.result?.days ?? partialDays
   const displayParsedRequest = stream.result?.parsedRequest ?? stream.partial?.parsedRequest
   const isDone = !!stream.result
 
-  // Auto-scroll to bottom when new recipe cards appear during streaming
+  // Auto-scroll only when a new day/recipe card appears
   const resultsEndRef = useRef<HTMLDivElement>(null)
+  const totalRecipeCount = displayDays.reduce((sum, d) => sum + (d.recipes?.length ?? 0), 0)
   useEffect(() => {
-    if (stream.isStreaming && displayRecipes.length > 0) {
+    if (stream.isStreaming && displayDays.length > 0) {
       resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
-  }, [stream.isStreaming, displayRecipes.length])
+  }, [stream.isStreaming, displayDays.length, totalRecipeCount])
   // Final scroll when stream completes to show footer actions
   useEffect(() => {
     if (stream.result) {
@@ -231,13 +282,13 @@ export function MealPlanner() {
                   {stream.isLoading && <LoaderCircle className="animate-spin" />}
                   {stream.isLoading ? t("generating") : t("generateButton")}
                 </Button>
-                {stream.result && includedRecipes.size > 0 && !savedPlanId && (
+                {stream.result && totalSelectedCount > 0 && !savedPlanId && (
                   <Button
                     onClick={() => { setPlanName(""); setSaveDialogOpen(true) }}
                     variant="outline"
                   >
                     <ClipboardList className="size-4" />
-                    {t("savePlanButton", { count: includedRecipes.size })}
+                    {t("savePlanButton", { count: totalSelectedCount })}
                   </Button>
                 )}
                 {savedPlanId && (
@@ -256,7 +307,7 @@ export function MealPlanner() {
         {/* Right column — results */}
         <div className="space-y-6">
           {/* Streaming status */}
-          {stream.isStreaming && !partialRecipes.length && (
+          {stream.isStreaming && !partialDays.length && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="size-4 animate-pulse text-primary" />
               <span className="animate-pulse">{t("streamingMessage")}</span>
@@ -268,11 +319,6 @@ export function MealPlanner() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("parsedRequestTitle")}</CardTitle>
-                {stream.result && (
-                  <CardDescription>
-                    {t("recipesFound", { count: stream.result.recipes.length })}
-                  </CardDescription>
-                )}
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 {displayParsedRequest.numberOfPeople && (
@@ -297,64 +343,103 @@ export function MealPlanner() {
             </Card>
           )}
 
-          {/* Recipe cards — renders during streaming (partial) and after done (full) */}
-          {displayRecipes.map((recipe, index) => {
-            if (!recipe.dishName) return null
-            const edited = isDone ? getEditedRecipe(index) : recipe
+          {/* Day sections with recipe cards */}
+          {displayDays.map((day) => {
+            if (!day.dayNumber) return null
+            const dayRecipes = day.recipes ?? []
+            const daySelectedSet = selectedRecipes.get(day.dayNumber)
+            const allDaySelected = isDone && daySelectedSet?.size === dayRecipes.length
             return (
-              <RecipeCard
-                key={index}
-                dishName={edited.dishName}
-                description={edited.description ?? ""}
-                cookingTimeLabel={
-                  edited.cookingTime
-                    ? t("cookingTime", { time: edited.cookingTime })
-                    : undefined
-                }
-                ingredients={edited.ingredients ?? []}
-                instructions={edited.instructions ?? []}
-                instructionsLabel={t("instructionsLabel")}
-                defaultOpen={true}
-                categoryMap={categoryMap}
-                {...(isDone && {
-                  cookingTime: edited.cookingTime,
-                  onEditCookingTime: (time: number) => updateRecipe(index, (r) => ({ ...r, cookingTime: time })),
-                  onEditDishName: (name: string) => updateRecipe(index, (r) => ({ ...r, dishName: name })),
-                  onEditDescription: (desc: string) => updateRecipe(index, (r) => ({ ...r, description: desc })),
-                  onEditIngredient: (idx: number, data: RecipeIngredient) => updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) })),
-                  onDeleteIngredient: (idx: number) => updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) })),
-                  onAddIngredient: (data: RecipeIngredient) => updateRecipe(index, (r) => ({ ...r, ingredients: [...r.ingredients, data] })),
-                  onEditInstruction: (idx: number, text: string) => updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) })),
-                  onDeleteInstruction: (idx: number) => updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) })),
-                  onAddInstruction: (text: string) => updateRecipe(index, (r) => ({ ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] })),
-                  unitOptions,
-                  categoryOptions,
-                  ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
-                  qtyPlaceholder: t("qtyPlaceholder"),
-                  unitPlaceholder: t("unitPlaceholder"),
-                  categoryPlaceholder: t("categoryPlaceholder"),
-                  addIngredientLabel: t("addIngredient"),
-                  addStepLabel: t("addStep"),
-                  stepPlaceholder: t("stepPlaceholder"),
+              <div key={day.dayNumber} className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  {isDone && !savedPlanId && (
+                    <input
+                      type="checkbox"
+                      checked={allDaySelected ?? false}
+                      onChange={() => toggleDay(day.dayNumber, dayRecipes.length)}
+                      className="size-4 accent-primary"
+                    />
+                  )}
+                  <h3 className="text-sm font-semibold text-muted-foreground">
+                    {t("dayTitle", { day: day.dayNumber })}
+                  </h3>
+                </div>
+                {dayRecipes.map((recipe, recipeIndex) => {
+                  if (!recipe.dishName) return null
+                  const edited = isDone ? getEditedRecipe(day.dayNumber, recipeIndex, recipe) : recipe
+                  const isSelected = isRecipeSelected(day.dayNumber, recipeIndex)
+                  return (
+                    <RecipeCard
+                      key={recipeIndex}
+                      dishName={edited.dishName}
+                      description={edited.description ?? ""}
+                      cookingTimeLabel={
+                        edited.cookingTime
+                          ? t("cookingTime", { time: edited.cookingTime })
+                          : undefined
+                      }
+                      ingredients={edited.ingredients ?? []}
+                      instructions={edited.instructions ?? []}
+                      instructionsLabel={t("instructionsLabel")}
+                      defaultOpen={false}
+                      categoryMap={categoryMap}
+                      {...(isDone && isSelected && {
+                        cookingTime: edited.cookingTime,
+                        onEditCookingTime: (time: number) => updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, cookingTime: time })),
+                        onEditDishName: (name: string) => updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, dishName: name })),
+                        onEditDescription: (desc: string) => updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, description: desc })),
+                        onEditIngredient: (idx: number, data: RecipeIngredient) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) })),
+                        onDeleteIngredient: (idx: number) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) })),
+                        onAddIngredient: (data: RecipeIngredient) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, ingredients: [...r.ingredients, data] })),
+                        onEditInstruction: (idx: number, text: string) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) })),
+                        onDeleteInstruction: (idx: number) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) })),
+                        onAddInstruction: (text: string) =>
+                          updateRecipe(day.dayNumber, recipeIndex, recipe, (r) => ({ ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] })),
+                        unitOptions,
+                        categoryOptions,
+                        ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
+                        qtyPlaceholder: t("qtyPlaceholder"),
+                        unitPlaceholder: t("unitPlaceholder"),
+                        categoryPlaceholder: t("categoryPlaceholder"),
+                        addIngredientLabel: t("addIngredient"),
+                        addStepLabel: t("addStep"),
+                        stepPlaceholder: t("stepPlaceholder"),
+                      })}
+                      footer={
+                        isDone && !savedPlanId ? (
+                          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleRecipe(day.dayNumber, recipeIndex)}
+                              className="size-4 accent-primary"
+                            />
+                            {t("includeInPlan")}
+                          </label>
+                        ) : undefined
+                      }
+                    />
+                  )
                 })}
-                footer={
-                  stream.result && !savedPlanId ? (
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={includedRecipes.has(index)}
-                        onChange={() => toggleRecipe(index)}
-                        className="size-4 accent-primary"
-                      />
-                      {t("includeInPlan")}
-                    </label>
-                  ) : undefined
-                }
-              />
+              </div>
             )
           })}
 
-          {stream.result && stream.result.recipes.length === 0 && (
+          {/* Streaming dots */}
+          {stream.isStreaming && displayDays.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 py-4">
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-primary" />
+            </div>
+          )}
+
+          {stream.result && displayDays.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
               <Sparkles className="mb-4 size-12 text-muted-foreground/40" />
               <p className="text-center text-sm font-medium text-muted-foreground">
