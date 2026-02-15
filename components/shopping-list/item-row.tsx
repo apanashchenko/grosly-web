@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,7 @@ interface ItemRowProps {
   onSaveEdit?: (data: ItemData) => void
   onCancelEdit?: () => void
   onDeleteItem?: () => void
+  deleting?: boolean
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
@@ -32,6 +33,7 @@ export function ItemRow({
   onSaveEdit,
   onCancelEdit,
   onDeleteItem,
+  deleting,
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
@@ -70,9 +72,10 @@ export function ItemRow({
         "group rounded-lg px-3 border transition-colors duration-150",
         isDragging ? "z-10 bg-muted/50 shadow-sm opacity-90" : "hover:bg-muted/30",
         item.checked && "bg-muted/40 border-muted",
-        onToggle && "cursor-pointer"
+        onToggle && !deleting && "cursor-pointer",
+        deleting && "pointer-events-none opacity-50"
       )}
-      onClick={handleRowClick}
+      onClick={deleting ? undefined : handleRowClick}
     >
       <div className={cn(
         "relative flex w-full items-stretch gap-2 py-3",
@@ -125,11 +128,15 @@ export function ItemRow({
                 variant="ghost"
                 size="icon-xs"
                 onClick={onDeleteItem}
-                disabled={item.checked}
+                disabled={item.checked || deleting}
                 className="text-destructive/60 hover:text-destructive"
                 data-no-toggle
               >
-                <Trash2 className="size-3.5" />
+                {deleting ? (
+                  <Loader2 className="size-3.5 animate-spin opacity-100" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
               </Button>
             )}
           </div>

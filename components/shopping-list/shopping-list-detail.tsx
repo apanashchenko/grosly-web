@@ -66,6 +66,7 @@ export function ShoppingListDetail({ listId }: Props) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [smartGrouping, setSmartGrouping] = useState(false)
+  const [deletingItemIndex, setDeletingItemIndex] = useState<number | null>(null)
   const [spaces, setSpaces] = useState<SpaceResponse[]>([])
   const [sharingOpen, setSharingOpen] = useState(false)
   const [sharingLoading, setSharingLoading] = useState(false)
@@ -175,12 +176,15 @@ export function ShoppingListDetail({ listId }: Props) {
     const item = list.items[index]
     if (!item) return
 
+    setDeletingItemIndex(index)
     try {
       await deleteShoppingListItem(list.id, item.id, spaceId)
       const fresh = await getShoppingList(listId, spaceId)
       setList(fresh)
     } catch (e) {
       if (handleConflict(e)) return
+    } finally {
+      setDeletingItemIndex(null)
     }
   }
 
@@ -388,6 +392,7 @@ export function ShoppingListDetail({ listId }: Props) {
             onEditTitle={handleEditTitle}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
+            deletingItemIndex={deletingItemIndex}
             onAddItem={handleAddItem}
             unitOptions={UNITS.map((u) => ({ value: u, label: t(`units.${u}`) }))}
             categoryOptions={categoryOptions}

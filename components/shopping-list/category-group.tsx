@@ -34,6 +34,7 @@ interface GroupedItemsProps {
   onReorderItems?: (fromIndex: number, toIndex: number) => void
   onEditItem?: (index: number, data: ItemData) => void
   onDeleteItem?: (index: number) => void
+  deletingItemIndex?: number | null
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
@@ -50,6 +51,7 @@ export function GroupedItems({
   onReorderItems,
   onEditItem,
   onDeleteItem,
+  deletingItemIndex,
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
@@ -100,6 +102,7 @@ export function GroupedItems({
           onReorderItems={onReorderItems}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
+          deletingItemIndex={deletingItemIndex}
           unitOptions={unitOptions}
           categoryOptions={categoryOptions}
           categoryPlaceholder={categoryPlaceholder}
@@ -119,6 +122,7 @@ function CategoryGroup({
   onReorderItems,
   onEditItem,
   onDeleteItem,
+  deletingItemIndex,
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
@@ -132,6 +136,7 @@ function CategoryGroup({
   onReorderItems?: (fromIndex: number, toIndex: number) => void
   onEditItem?: (index: number, data: ItemData) => void
   onDeleteItem?: (index: number) => void
+  deletingItemIndex?: number | null
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
@@ -214,6 +219,7 @@ function CategoryGroup({
                     onDeleteItem(originalIndex)
                     setEditingIndex(null)
                   } : undefined}
+                  deleting={deletingItemIndex === originalIndex}
                   unitOptions={unitOptions}
                   categoryOptions={categoryOptions}
                   categoryPlaceholder={categoryPlaceholder}

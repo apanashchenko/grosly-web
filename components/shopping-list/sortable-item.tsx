@@ -26,6 +26,7 @@ export function SortableItem({
   onSaveEdit,
   onCancelEdit,
   onDeleteItem,
+  deleting,
   unitOptions,
   categoryOptions,
   categoryPlaceholder,
@@ -40,6 +41,7 @@ export function SortableItem({
   onSaveEdit?: (data: ItemData) => void
   onCancelEdit?: () => void
   onDeleteItem?: () => void
+  deleting?: boolean
   unitOptions?: UnitOption[]
   categoryOptions?: CategoryOption[]
   categoryPlaceholder?: string
@@ -79,6 +81,7 @@ export function SortableItem({
         onSaveEdit={onSaveEdit}
         onCancelEdit={onCancelEdit}
         onDeleteItem={onDeleteItem}
+        deleting={deleting}
         unitOptions={unitOptions}
         categoryOptions={categoryOptions}
         categoryPlaceholder={categoryPlaceholder}

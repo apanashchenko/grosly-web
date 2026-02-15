@@ -85,6 +85,7 @@ interface Props {
   deleteDescription?: string
   deleteConfirm?: string
   deleteCancel?: string
+  deletingItemIndex?: number | null
   selectable?: boolean
   selected?: boolean
   onSelect?: () => void
@@ -129,6 +130,7 @@ export function ShoppingListCard({
   deleteDescription,
   deleteConfirm,
   deleteCancel,
+  deletingItemIndex,
   selectable,
   selected,
   onSelect,
@@ -434,6 +436,7 @@ export function ShoppingListCard({
               onReorderItems={onReorderItems}
               onEditItem={onEditItem}
               onDeleteItem={onDeleteItem}
+              deletingItemIndex={deletingItemIndex}
               unitOptions={unitOptions}
               categoryOptions={categoryOptions}
               categoryPlaceholder={categoryPlaceholder}
@@ -471,6 +474,7 @@ export function ShoppingListCard({
                         onDeleteItem(originalIndex)
                         setEditingIndex(null)
                       } : undefined}
+                      deleting={deletingItemIndex === originalIndex}
                       unitOptions={unitOptions}
                       categoryOptions={categoryOptions}
                       categoryPlaceholder={categoryPlaceholder}
