@@ -62,7 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "recipes",
     items: [
       { href: "/recipes/new", icon: PenLine, key: "manualRecipe" },
-      { href: "/", icon: ChefHat, key: "parseRecipe" },
+      { href: "/parse", icon: ChefHat, key: "parseRecipe" },
       { href: "/single", icon: Sparkles, key: "generateRecipe" },
       { href: "/suggest", icon: Lightbulb, key: "suggestRecipes" },
       { href: "/recipes", icon: Bookmark, key: "savedRecipes" },

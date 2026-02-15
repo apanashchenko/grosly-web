@@ -56,8 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Route protection: redirect to /login when not authenticated
+  const PUBLIC_ROUTES = ["/login", "/"]
   useEffect(() => {
-    if (!isLoading && !user && pathname !== "/login") {
+    if (!isLoading && !user && !PUBLIC_ROUTES.includes(pathname)) {
       router.replace("/login")
     }
   }, [isLoading, user, pathname, router])

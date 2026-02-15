@@ -32,8 +32,8 @@
     "unexpectedError": "An unexpected error occurred. Please try again."
   },
   "Metadata": {
-    "title": "Grosly — Recipe Ingredient Parser",
-    "description": "Paste a recipe and extract structured ingredient data for your grocery list"
+    "title": "Grosly — Recipe to Grocery List with AI",
+    "description": "Turn any recipe into an organized shopping list in seconds using AI"
   },
   "RecipeParser": {
     "heading": "Grosly",
@@ -534,5 +534,50 @@
     "addToMealPlan": "Add",
     "cancelAddToMealPlan": "Cancel",
     "unexpectedError": "An unexpected error occurred."
+  },
+  "Landing": {
+    "heroTitle": "From Recipe to Grocery List in Seconds",
+    "heroSubtitle": "Paste a recipe, snap a photo, or describe a dish — Grosly uses AI to extract ingredients and build your shopping list automatically.",
+    "heroCta": "Get Started",
+    "heroCtaAuth": "Go to Recipes",
+    "heroLearnMore": "Learn More",
+    "featuresTitle": "Everything You Need",
+    "featuresSubtitle": "Powerful tools to simplify your cooking and shopping workflow.",
+    "feature": {
+      "parse": {
+        "title": "Recipe Parsing",
+        "desc": "Paste recipe text or upload a photo — AI extracts all ingredients with quantities and units."
+      },
+      "generate": {
+        "title": "AI Recipe Generation",
+        "desc": "Describe what you want to cook and get a full recipe with ingredients and instructions."
+      },
+      "shopping": {
+        "title": "Smart Shopping Lists",
+        "desc": "Drag-and-drop organization, auto-categorization, and one-tap creation from any recipe."
+      },
+      "spaces": {
+        "title": "Shared Spaces",
+        "desc": "Collaborate on shopping lists with family and friends in real time."
+      }
+    },
+    "howItWorksTitle": "How It Works",
+    "howItWorksSubtitle": "Three simple steps from recipe to grocery store.",
+    "step1": {
+      "title": "Add a Recipe",
+      "desc": "Paste text, upload a photo, or describe a dish you want to cook."
+    },
+    "step2": {
+      "title": "AI Does the Work",
+      "desc": "Ingredients are extracted, categorized, and organized automatically."
+    },
+    "step3": {
+      "title": "Shop with Ease",
+      "desc": "Create a shopping list, share it with your household, and check items off as you shop."
+    },
+    "ctaTitle": "Ready to Simplify Your Cooking?",
+    "ctaSubtitle": "Join Grosly and turn any recipe into an organized shopping list in seconds.",
+    "ctaButton": "Sign Up with Google",
+    "ctaButtonAuth": "Start Cooking"
   }
 }

@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server"
-import { LandingPage } from "@/components/landing/landing-page"
+import { RecipeParser } from "@/components/recipes/recipe-parser"
 
-export default async function Page({
+export default async function ParsePage({
   params,
 }: {
   params: Promise<{ locale: string }>
@@ -9,5 +9,5 @@ export default async function Page({
   const { locale } = await params
   setRequestLocale(locale)
 
-  return <LandingPage />
+  return <RecipeParser />
 }
