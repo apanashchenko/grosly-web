@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import { UNITS, type GeneratedMealPlanResponse, type GeneratedRecipe, type RecipeIngredient } from "@/lib/types"
 import { generateMealPlan, streamMealPlan, createMealPlan } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { PageHeader } from "@/components/shared/page-header"
@@ -47,6 +48,7 @@ export function MealPlanner() {
   const tList = useTranslations("ShoppingList")
   const locale = useLocale()
   const { categories, categoryMap } = useCategories()
+  const { localizeCategoryName } = useCategoryLocalization()
 
   const [query, setQuery] = useState("")
   const [queryOpen, setQueryOpen] = useState(true)
@@ -129,6 +131,7 @@ export function MealPlanner() {
             quantity: ing.quantity,
             unit: ing.unit?.canonical ?? "",
             ...(ing.categoryId && { categoryId: ing.categoryId }),
+            ...(ing.note && { note: ing.note }),
           })),
         })),
       })
@@ -148,10 +151,25 @@ export function MealPlanner() {
   const displayParsedRequest = stream.result?.parsedRequest ?? stream.partial?.parsedRequest
   const isDone = !!stream.result
 
+  // Auto-scroll to bottom when new recipe cards appear during streaming
+  const resultsEndRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (stream.isStreaming && displayRecipes.length > 0) {
+      resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [stream.isStreaming, displayRecipes.length])
+  // Final scroll when stream completes to show footer actions
+  useEffect(() => {
+    if (stream.result) {
+      const t = setTimeout(() => resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [stream.result])
+
   const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
   const categoryOptions = categories.map((c) => ({
     value: c.id,
-    label: c.name,
+    label: localizeCategoryName(c),
     icon: c.icon,
   }))
 
@@ -296,7 +314,7 @@ export function MealPlanner() {
                 ingredients={edited.ingredients ?? []}
                 instructions={edited.instructions ?? []}
                 instructionsLabel={t("instructionsLabel")}
-                defaultOpen={false}
+                defaultOpen={true}
                 categoryMap={categoryMap}
                 {...(isDone && {
                   cookingTime: edited.cookingTime,
@@ -344,7 +362,7 @@ export function MealPlanner() {
               </p>
             </div>
           )}
-
+          <div ref={resultsEndRef} />
         </div>
       </div>
 

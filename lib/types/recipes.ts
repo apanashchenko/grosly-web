@@ -21,6 +21,7 @@ export interface RecipeIngredient {
   name: string
   quantity: number
   unit: IngredientUnit
+  note?: string | null
   categoryId: string | null
 }
 

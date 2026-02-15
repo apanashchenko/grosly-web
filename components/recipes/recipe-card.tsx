@@ -475,45 +475,46 @@ export function RecipeCard({
                   ? categoryMap?.get(ingredient.categoryId)
                   : undefined
                 return (
-                  <div
-                    key={index}
-                    className="group/ing flex items-baseline gap-2 py-3"
-                  >
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 font-medium truncate",
-                        isHighlighted && "text-primary bg-primary/10 px-1 rounded"
-                      )}
-                    >
-                      {ingredient.name}
-                    </span>
-                    {qty && <Badge variant="secondary" className="shrink-0">{qty}</Badge>}
-                    {category && (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {category.icon ? `${category.icon} ` : ""}
-                        {localizeCategoryName(category)}
-                      </Badge>
-                    )}
-                    {onEditIngredient && (
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => startEditIngredient(index)}
-                        className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground"
+                  <div key={index} className="py-3">
+                    <div className="group/ing flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span
+                        className={cn(
+                          "font-medium break-words",
+                          isHighlighted && "text-primary bg-primary/10 px-1 rounded"
+                        )}
                       >
-                        <Pencil className="size-3" />
-                      </Button>
-                    )}
-                    {onDeleteIngredient && (
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => onDeleteIngredient(index)}
-                        className="shrink-0 text-destructive/60 hover:text-destructive"
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
-                    )}
+                        {ingredient.name}
+                      </span>
+                      <div className="flex items-baseline gap-2">
+                        {qty && <Badge variant="secondary" className="shrink-0">{qty}</Badge>}
+                        {category && (
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            {category.icon ? `${category.icon} ` : ""}
+                            {localizeCategoryName(category)}
+                          </Badge>
+                        )}
+                        {onEditIngredient && (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => startEditIngredient(index)}
+                            className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground"
+                          >
+                            <Pencil className="size-3" />
+                          </Button>
+                        )}
+                        {onDeleteIngredient && (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => onDeleteIngredient(index)}
+                            className="shrink-0 text-destructive/60 hover:text-destructive"
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )
               })}

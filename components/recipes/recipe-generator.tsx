@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { UNITS, type SingleRecipeResponse, type GeneratedRecipe } from "@/lib/types"
 import { generateSingleRecipe, streamSingleRecipe, saveRecipe, createShoppingList } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
@@ -49,6 +50,7 @@ export function RecipeGenerator() {
   const tList = useTranslations("ShoppingList")
   const locale = useLocale()
   const { categories, categoryMap } = useCategories()
+  const { localizeCategoryName } = useCategoryLocalization()
 
   const [query, setQuery] = useState("")
   const [editedRecipe, setEditedRecipe] = useState<GeneratedRecipe | null>(null)
@@ -97,6 +99,7 @@ export function RecipeGenerator() {
           quantity: ing.quantity,
           unit: ing.unit?.canonical ?? "",
           ...(ing.categoryId && { categoryId: ing.categoryId }),
+          ...(ing.note && { note: ing.note }),
         })),
       })
       setRecipeSaved(true)
@@ -121,6 +124,7 @@ export function RecipeGenerator() {
           quantity: ing.quantity,
           unit: ing.unit?.canonical ?? "",
           ...(ing.categoryId && { categoryId: ing.categoryId }),
+          ...(ing.note && { note: ing.note }),
         })),
       })
       setSavedSuccess(true)
@@ -151,10 +155,27 @@ export function RecipeGenerator() {
   const displayPeople = editedPeople ?? stream.result?.numberOfPeople ?? stream.partial?.numberOfPeople
   const isDone = !!stream.result
 
+  // Auto-scroll to bottom during streaming as new content appears
+  const resultsEndRef = useRef<HTMLDivElement>(null)
+  const ingCount = displayRecipe?.ingredients?.length ?? 0
+  const instrCount = displayRecipe?.instructions?.length ?? 0
+  useEffect(() => {
+    if (stream.isStreaming) {
+      resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [stream.isStreaming, ingCount, instrCount])
+  // Final scroll when stream completes to show footer actions
+  useEffect(() => {
+    if (stream.result) {
+      const t = setTimeout(() => resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [stream.result])
+
   const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
   const categoryOptions = categories.map((c) => ({
     value: c.id,
-    label: c.name,
+    label: localizeCategoryName(c),
     icon: c.icon,
   }))
 
@@ -333,6 +354,7 @@ export function RecipeGenerator() {
               </p>
             </div>
           )}
+          <div ref={resultsEndRef} />
         </div>
       </div>
 

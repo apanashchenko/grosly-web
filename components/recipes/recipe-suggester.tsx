@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import {
   ChevronDown,
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { UNITS, type SuggestRecipesResponse, type SuggestedRecipe, type RecipeIngredient } from "@/lib/types"
 import { suggestRecipes, streamSuggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
+import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useStream } from "@/hooks/use-stream"
 import { serializeRecipeText } from "@/components/recipes/serialize-recipe"
 import { SaveRecipeDialog } from "@/components/recipes/save-recipe-dialog"
@@ -47,6 +48,7 @@ export function RecipeSuggester() {
   const locale = useLocale()
   const tList = useTranslations("ShoppingList")
   const { categories, categoryMap } = useCategories()
+  const { localizeCategoryName } = useCategoryLocalization()
 
   const [ingredients, setIngredients] = useState<string[]>([])
   const [currentIngredient, setCurrentIngredient] = useState("")
@@ -111,6 +113,7 @@ export function RecipeSuggester() {
           quantity: ing.quantity,
           unit: ing.unit?.canonical ?? "",
           ...(ing.categoryId && { categoryId: ing.categoryId }),
+          ...(ing.note && { note: ing.note }),
         })),
       })
       setSavedRecipeIndexes((prev) => new Set(prev).add(recipeToSave))
@@ -142,10 +145,25 @@ export function RecipeSuggester() {
   const displayRecipes = stream.result?.suggestedRecipes ?? partialSuggested
   const isDone = !!stream.result
 
+  // Auto-scroll to bottom when new recipe cards appear during streaming
+  const resultsEndRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (stream.isStreaming && displayRecipes.length > 0) {
+      resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }
+  }, [stream.isStreaming, displayRecipes.length])
+  // Final scroll when stream completes to show footer actions
+  useEffect(() => {
+    if (stream.result) {
+      const t = setTimeout(() => resultsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [stream.result])
+
   const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
   const categoryOpts = categories.map((c) => ({
     value: c.id,
-    label: c.name,
+    label: localizeCategoryName(c),
     icon: c.icon,
   }))
 
@@ -431,6 +449,7 @@ export function RecipeSuggester() {
               </p>
             </div>
           )}
+          <div ref={resultsEndRef} />
 
           {/* Shopping list from additional ingredients */}
           {selectedRecipe && additionalItems.length > 0 && (

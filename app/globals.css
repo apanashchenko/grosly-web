@@ -120,8 +120,8 @@
   * {
     @apply border-border outline-ring/50;
   }
-  html, body {
-    overscroll-behavior: none;
+  html {
+    background-color: var(--background);
   }
   body {
     @apply bg-background text-foreground;
