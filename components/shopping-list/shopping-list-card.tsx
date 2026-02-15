@@ -137,7 +137,15 @@ export function ShoppingListCard({
     }
   }
 
-  const itemIds = items.map((_, i) => i)
+  // Sort checked items to the bottom of the list
+  const sortedItems = items
+    .map((item, index) => ({ item, originalIndex: index }))
+    .sort((a, b) => {
+      if (a.item.checked === b.item.checked) return 0
+      return a.item.checked ? 1 : -1
+    })
+
+  const itemIds = sortedItems.map(({ originalIndex }) => originalIndex)
 
   return (
     <Card
@@ -425,22 +433,22 @@ export function ShoppingListCard({
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
-                  {items.map((item, index) => (
+                  {sortedItems.map(({ item, originalIndex }) => (
                     <SortableItem
-                      key={item.id ?? index}
+                      key={item.id ?? originalIndex}
                       item={item}
-                      index={index}
-                      onToggle={() => onToggleItem(index)}
+                      index={originalIndex}
+                      onToggle={() => onToggleItem(originalIndex)}
                       sortable={!!onReorderItems}
-                      editing={editingIndex === index}
-                      onStartEdit={onEditItem ? () => setEditingIndex(index) : undefined}
+                      editing={editingIndex === originalIndex}
+                      onStartEdit={onEditItem ? () => setEditingIndex(originalIndex) : undefined}
                       onSaveEdit={onEditItem ? (data) => {
-                        onEditItem(index, data)
+                        onEditItem(originalIndex, data)
                         setEditingIndex(null)
                       } : undefined}
                       onCancelEdit={() => setEditingIndex(null)}
                       onDeleteItem={onDeleteItem ? () => {
-                        onDeleteItem(index)
+                        onDeleteItem(originalIndex)
                         setEditingIndex(null)
                       } : undefined}
                       unitOptions={unitOptions}

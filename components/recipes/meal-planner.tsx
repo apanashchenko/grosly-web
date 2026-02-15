@@ -88,6 +88,7 @@ export function MealPlanner() {
         numberOfDays: stream.result.parsedRequest.numberOfDays,
         numberOfPeople: stream.result.parsedRequest.numberOfPeople,
         ...(stream.result.description && { description: stream.result.description }),
+        originalInput: query,
         recipes: selected.map((recipe) => ({
           title: recipe.dishName,
           source: "GENERATED" as const,

@@ -41,7 +41,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RecipeCard } from "@/components/recipes/recipe-card"
 
-const MAX_LENGTH = 500
+const MAX_LENGTH = 5000
 
 export function RecipeGenerator() {
   const t = useTranslations("RecipeGenerator")
@@ -80,6 +80,7 @@ export function RecipeGenerator() {
         title: opts.title || undefined,
         source: "GENERATED",
         text: serializeRecipeText(recipe),
+        originalInput: query,
         ingredients: recipe.ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,

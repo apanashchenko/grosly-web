@@ -98,6 +98,7 @@ export interface SaveRecipeRequest {
   title?: string
   source: RecipeSource
   text: string
+  originalInput?: string
   ingredients?: RecipeIngredientInput[]
 }
 
@@ -111,6 +112,7 @@ export interface SavedRecipeResponse {
   title: string
   source: RecipeSource
   text: string
+  originalInput: string | null
   ingredients: RecipeIngredientResponse[]
   mealPlans: SavedRecipeMealPlan[]
   createdAt: string

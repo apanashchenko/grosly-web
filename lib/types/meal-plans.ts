@@ -26,6 +26,7 @@ export interface MealPlanResponse {
   description: string | null
   numberOfDays: number
   numberOfPeople: number
+  originalInput: string | null
   recipes: MealPlanRecipe[]
   createdAt: string
   updatedAt: string
@@ -53,6 +54,7 @@ export interface CreateMealPlanRequest {
   description?: string
   numberOfDays?: number
   numberOfPeople?: number
+  originalInput?: string
   recipes?: CreateMealPlanRecipeInput[]
 }
 

@@ -140,6 +140,7 @@ export function RecipeParser() {
         title: opts.title || undefined,
         source: parsedFromImage ? "PARSED_IMAGE" : "PARSED",
         text: recipeText,
+        originalInput: parsedFromImage ? "[image upload]" : recipeText,
         ingredients: ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity ?? 0,

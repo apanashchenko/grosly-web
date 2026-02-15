@@ -102,6 +102,7 @@ export function RecipeSuggester() {
         title: opts.title || undefined,
         source: "SUGGESTED",
         text: serializeRecipeText(recipe),
+        originalInput: ingredients.join(", "),
         ingredients: recipe.ingredients.map((ing) => ({
           name: ing.name,
           quantity: ing.quantity,
