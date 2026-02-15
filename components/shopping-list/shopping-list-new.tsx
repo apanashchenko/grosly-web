@@ -182,7 +182,7 @@ export function ShoppingListNew() {
         position: i,
       }))
       await createShoppingList({
-        name: listName.trim() || undefined,
+        name: listName.trim() || t("defaultListName", { date: new Date().toLocaleDateString("sv-SE") }),
         label: label.trim() || undefined,
         items,
       }, spaceId)
@@ -323,7 +323,6 @@ export function ShoppingListNew() {
               value={listName}
               onChange={(e) => setListName(e.target.value)}
               placeholder={t("listNamePlaceholder")}
-              required
             />
             <Input
               value={label}
@@ -332,7 +331,7 @@ export function ShoppingListNew() {
             />
             <Button
               onClick={handleCreateList}
-              disabled={pendingItems.length === 0 || !listName.trim() || creating}
+              disabled={pendingItems.length === 0 || creating}
               className="w-full shadow-md hover:shadow-lg"
               size="lg"
             >

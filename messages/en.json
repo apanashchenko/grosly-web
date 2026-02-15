@@ -83,7 +83,7 @@
     "pin": "Pin to top",
     "pinnedSection": "Pinned",
     "otherSection": "Other lists",
-    "defaultListName": "List #{number}",
+    "defaultListName": "Shopping list {date}",
     "createListButton": "Create shopping list",
     "emptyLists": "No lists yet",
     "searchPlaceholder": "Search lists...",

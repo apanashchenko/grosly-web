@@ -83,7 +83,7 @@
     "pin": "Закріпити",
     "pinnedSection": "Закріплені",
     "otherSection": "Інші списки",
-    "defaultListName": "Список #{number}",
+    "defaultListName": "Список покупок {date}",
     "createListButton": "Створити список",
     "emptyLists": "Списків поки немає",
     "searchPlaceholder": "Пошук списків...",
