@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useEffect } from "react"
 import {
   ScanText,
   Sparkles,
@@ -8,7 +9,7 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react"
-import { Link } from "@/i18n/navigation"
+import { Link, useRouter } from "@/i18n/navigation"
 import { useAuth } from "@/lib/auth"
 import { Logo } from "@/components/shared/logo"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,15 @@ const STEPS = ["step1", "step2", "step3"] as const
 export function LandingPage() {
   const t = useTranslations("Landing")
   const { isAuthenticated } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/shopping-list")
+    }
+  }, [isAuthenticated, router])
+
+  if (isAuthenticated) return null
 
   return (
     <main className="mx-auto max-w-6xl px-4">
