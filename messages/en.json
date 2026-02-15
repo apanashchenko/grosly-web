@@ -63,7 +63,9 @@
     "cancel": "Cancel",
     "saving": "Saving...",
     "savedSuccess": "List created",
-    "viewShoppingLists": "View shopping lists"
+    "viewShoppingLists": "View shopping lists",
+    "addIngredient": "Add ingredient",
+    "ingredientNamePlaceholder": "Ingredient name"
   },
   "ShoppingList": {
     "heading": "Shopping List",
@@ -118,6 +120,7 @@
     "loadingMore": "Loading...",
     "backToLists": "Back to lists",
     "openList": "Open",
+    "deleteListButton": "Delete list",
     "deleteListTitle": "Delete shopping list?",
     "deleteListDescription": "This shopping list will be permanently deleted. This action cannot be undone.",
     "deleteListConfirm": "Delete",
@@ -157,7 +160,14 @@
     "createShoppingList": "Create Shopping List",
     "createListDescription": "Enter a name or leave empty for an automatic name.",
     "listNamePlaceholder": "List name (optional)",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "ingredientNamePlaceholder": "Ingredient name",
+    "qtyPlaceholder": "Qty",
+    "unitPlaceholder": "Unit",
+    "categoryPlaceholder": "Category",
+    "addIngredient": "Add ingredient",
+    "addStep": "Add step",
+    "stepPlaceholder": "Step description"
   },
   "MealPlanner": {
     "heading": "Meal Plan",
@@ -190,7 +200,20 @@
     "savePlanButton": "Save Plan ({count, plural, one {# recipe} other {# recipes}})",
     "savingPlan": "Saving...",
     "planSaved": "Plan saved!",
-    "streamingMessage": "We're planning your meals..."
+    "streamingMessage": "We're planning your meals...",
+    "ingredientNamePlaceholder": "Ingredient name",
+    "qtyPlaceholder": "Qty",
+    "unitPlaceholder": "Unit",
+    "categoryPlaceholder": "Category",
+    "addIngredient": "Add ingredient",
+    "addStep": "Add step",
+    "stepPlaceholder": "Step description",
+    "savePlanDialogTitle": "Save Plan",
+    "savePlanDialogDescription": "Enter a name for your meal plan",
+    "planNamePlaceholder": "Plan name (optional)",
+    "cancel": "Cancel",
+    "savePlanConfirm": "Save",
+    "defaultPlanName": "Meal plan {date}"
   },
   "RecipeSuggester": {
     "heading": "Recipe Suggester",
@@ -219,7 +242,14 @@
     "instructionsLabel": "Instructions",
     "noRecipes": "No recipes found for these ingredients. Try different ones.",
     "noRecipesStrict": "Can't make a recipe from these ingredients alone. Try turning off strict mode or adding more items.",
-    "streamingMessage": "We're finding recipes for you..."
+    "streamingMessage": "We're finding recipes for you...",
+    "ingredientNamePlaceholder": "Ingredient name",
+    "qtyPlaceholder": "Qty",
+    "unitPlaceholder": "Unit",
+    "categoryPlaceholder": "Category",
+    "addIngredient": "Add ingredient",
+    "addStep": "Add step",
+    "stepPlaceholder": "Step description"
   },
   "Preferences": {
     "heading": "Preferences",

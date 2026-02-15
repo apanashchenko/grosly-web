@@ -11,7 +11,7 @@ import {
   ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { SingleRecipeResponse } from "@/lib/types"
+import { UNITS, type SingleRecipeResponse, type GeneratedRecipe } from "@/lib/types"
 import { generateSingleRecipe, streamSingleRecipe, saveRecipe, createShoppingList } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
 import { useStream } from "@/hooks/use-stream"
@@ -48,9 +48,11 @@ export function RecipeGenerator() {
   const tSave = useTranslations("SavedRecipes")
   const tList = useTranslations("ShoppingList")
   const locale = useLocale()
-  const { categoryMap } = useCategories()
+  const { categories, categoryMap } = useCategories()
 
   const [query, setQuery] = useState("")
+  const [editedRecipe, setEditedRecipe] = useState<GeneratedRecipe | null>(null)
+  const [editedPeople, setEditedPeople] = useState<number | null>(null)
   const [queryOpen, setQueryOpen] = useState(true)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
@@ -67,13 +69,21 @@ export function RecipeGenerator() {
     return () => abort()
   }, [abort])
 
+  // Initialize editedRecipe when stream finishes
+  useEffect(() => {
+    if (stream.result) {
+      setEditedRecipe(structuredClone(stream.result.recipe))
+      setEditedPeople(stream.result.numberOfPeople)
+    }
+  }, [stream.result])
+
   const charCount = query.length
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
   async function handleSaveRecipe(opts: { title: string }) {
-    if (!stream.result) return
-    const recipe = stream.result.recipe
+    const recipe = editedRecipe ?? stream.result?.recipe
+    if (!recipe) return
 
     setSavingRecipe(true)
     try {
@@ -99,8 +109,8 @@ export function RecipeGenerator() {
   }
 
   async function handleCreateList() {
-    if (!stream.result) return
-    const recipe = stream.result.recipe
+    const recipe = editedRecipe ?? stream.result?.recipe
+    if (!recipe) return
 
     setSavingList(true)
     try {
@@ -126,6 +136,8 @@ export function RecipeGenerator() {
     setRecipeSaved(false)
     setSavedSuccess(false)
     setListName("")
+    setEditedRecipe(null)
+    setEditedPeople(null)
     stream.start(
       (callbacks, signal) =>
         streamSingleRecipe(query, locale, callbacks, signal),
@@ -133,10 +145,18 @@ export function RecipeGenerator() {
     )
   }
 
-  // Use partial data during streaming, full result after done
+  // Use edited recipe when available, otherwise partial during streaming, full result after done
   const partialRecipe = stream.partial?.recipe
-  const displayRecipe = stream.result?.recipe ?? partialRecipe
-  const displayPeople = stream.result?.numberOfPeople ?? stream.partial?.numberOfPeople
+  const displayRecipe = editedRecipe ?? stream.result?.recipe ?? partialRecipe
+  const displayPeople = editedPeople ?? stream.result?.numberOfPeople ?? stream.partial?.numberOfPeople
+  const isDone = !!stream.result
+
+  const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
+  const categoryOptions = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+    icon: c.icon,
+  }))
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -231,6 +251,29 @@ export function RecipeGenerator() {
               instructionsLabel={t("instructionsLabel")}
               defaultOpen={true}
               categoryMap={categoryMap}
+              {...(isDone && {
+                cookingTime: displayRecipe.cookingTime,
+                people: displayPeople,
+                onEditCookingTime: (time: number) => setEditedRecipe((r) => r ? { ...r, cookingTime: time } : r),
+                onEditPeople: (p: number) => setEditedPeople(p),
+                onEditDishName: (name) => setEditedRecipe((r) => r ? { ...r, dishName: name } : r),
+                onEditDescription: (desc) => setEditedRecipe((r) => r ? { ...r, description: desc } : r),
+                onEditIngredient: (idx, data) => setEditedRecipe((r) => r ? { ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) } : r),
+                onDeleteIngredient: (idx) => setEditedRecipe((r) => r ? { ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) } : r),
+                onAddIngredient: (data) => setEditedRecipe((r) => r ? { ...r, ingredients: [...r.ingredients, data] } : r),
+                onEditInstruction: (idx, text) => setEditedRecipe((r) => r ? { ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) } : r),
+                onDeleteInstruction: (idx) => setEditedRecipe((r) => r ? { ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) } : r),
+                onAddInstruction: (text) => setEditedRecipe((r) => r ? { ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] } : r),
+                unitOptions,
+                categoryOptions,
+                ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
+                qtyPlaceholder: t("qtyPlaceholder"),
+                unitPlaceholder: t("unitPlaceholder"),
+                categoryPlaceholder: t("categoryPlaceholder"),
+                addIngredientLabel: t("addIngredient"),
+                addStepLabel: t("addStep"),
+                stepPlaceholder: t("stepPlaceholder"),
+              })}
               footer={
                 stream.result ? (
                   <div className="flex flex-col gap-3 w-full">
@@ -298,7 +341,7 @@ export function RecipeGenerator() {
         onOpenChange={setSaveDialogOpen}
         onSave={handleSaveRecipe}
         saving={savingRecipe}
-        defaultTitle={stream.result?.recipe.dishName ?? ""}
+        defaultTitle={editedRecipe?.dishName ?? stream.result?.recipe.dishName ?? ""}
       />
 
       <Dialog open={createListDialogOpen} onOpenChange={setCreateListDialogOpen}>

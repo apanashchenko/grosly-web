@@ -414,6 +414,7 @@ export function ShoppingListDetail({ listId }: Props) {
             onTogglePin={handleTogglePin}
             pinLabel={t("pin")}
             onDelete={handleDeleteList}
+            deleteButtonLabel={t("deleteListButton")}
             deleteTitle={t("deleteListTitle")}
             deleteDescription={t("deleteListDescription")}
             deleteConfirm={t("deleteListConfirm")}

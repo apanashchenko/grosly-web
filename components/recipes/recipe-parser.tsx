@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useTranslations } from "next-intl"
-import { ChevronDown, LoaderCircle, ShoppingCart, Check, Trash2, Bookmark, ImagePlus, FileImage } from "lucide-react"
+import { ChevronDown, LoaderCircle, ShoppingCart, Check, Trash2, Bookmark, ImagePlus, FileImage, Plus, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { UNITS, type ParsedIngredient, type Category } from "@/lib/types"
 import { parseRecipe, parseRecipeImage, createShoppingList, getCategories, saveRecipe } from "@/lib/api"
@@ -68,6 +68,8 @@ export function RecipeParser() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeSaved, setRecipeSaved] = useState(false)
+  const [addingIngredient, setAddingIngredient] = useState(false)
+  const [newIng, setNewIng] = useState<ParsedIngredient>({ name: "", quantity: null, unit: "", localizedUnit: "", note: null, categoryId: null })
 
   const charCount = recipeText.length
   const isOverLimit = charCount > MAX_LENGTH
@@ -209,6 +211,22 @@ export function RecipeParser() {
     setIngredients((prev) =>
       prev.map((ing, i) => (i === index ? { ...ing, note: value || null } : ing))
     )
+  }
+
+  function handleNameChange(index: number, value: string) {
+    setIngredients((prev) =>
+      prev.map((ing, i) => (i === index ? { ...ing, name: value } : ing))
+    )
+  }
+
+  const emptyIng: ParsedIngredient = { name: "", quantity: null, unit: "", localizedUnit: "", note: null, categoryId: null }
+
+  function handleConfirmAddIngredient() {
+    const trimmed = newIng.name.trim()
+    if (!trimmed) return
+    setIngredients((prev) => [...prev, { ...newIng, name: trimmed }])
+    setNewIng(emptyIng)
+    setAddingIngredient(false)
   }
 
   function handleCategoryChange(index: number, value: string) {
@@ -452,9 +470,11 @@ export function RecipeParser() {
                   {ingredients.map((ingredient, index) => (
                     <div key={index} className="space-y-1.5 py-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 font-medium truncate">
-                          {ingredient.name}
-                        </span>
+                        <Input
+                          value={ingredient.name}
+                          onChange={(e) => handleNameChange(index, e.target.value)}
+                          className="min-w-0 flex-1 h-7 text-sm font-medium"
+                        />
                         <Button
                           variant="ghost"
                           size="icon-xs"
@@ -515,6 +535,88 @@ export function RecipeParser() {
                     </div>
                   ))}
                 </div>
+                {addingIngredient ? (
+                  <div className="mt-2 space-y-1.5 border-t pt-2.5">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        autoFocus
+                        value={newIng.name}
+                        onChange={(e) => setNewIng((d) => ({ ...d, name: e.target.value }))}
+                        placeholder={t("ingredientNamePlaceholder")}
+                        className="min-w-0 flex-1 h-7 text-sm font-medium"
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") { e.preventDefault(); setAddingIngredient(false); setNewIng(emptyIng) }
+                        }}
+                      />
+                    </div>
+                    <Input
+                      value={newIng.note ?? ""}
+                      onChange={(e) => setNewIng((d) => ({ ...d, note: e.target.value || null }))}
+                      placeholder={t("notePlaceholder")}
+                      className="h-7 text-sm"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        value={newIng.quantity ?? ""}
+                        onChange={(e) => setNewIng((d) => ({ ...d, quantity: e.target.value === "" ? null : Number(e.target.value) || 0 }))}
+                        min={0}
+                        step="any"
+                        className="w-16 h-7 text-sm"
+                      />
+                      <Select value={newIng.unit} onValueChange={(v) => setNewIng((d) => ({ ...d, unit: v }))}>
+                        <SelectTrigger className="w-20 h-7 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {unitOptions.map((u) => (
+                              <SelectItem key={u.value} value={u.value}>
+                                {u.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={newIng.categoryId ?? NONE_CATEGORY}
+                        onValueChange={(v) => setNewIng((d) => ({ ...d, categoryId: v === NONE_CATEGORY ? null : v }))}
+                      >
+                        <SelectTrigger className="flex-1 h-7 text-sm">
+                          <SelectValue placeholder={t("categoryPlaceholder")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value={NONE_CATEGORY}>—</SelectItem>
+                            {categoryOptions.map((c) => (
+                              <SelectItem key={c.value} value={c.value}>
+                                {c.icon ? `${c.icon} ${c.label}` : c.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon-xs" disabled={!newIng.name.trim()} onClick={handleConfirmAddIngredient} className="text-primary hover:text-primary">
+                        <Check className="size-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon-xs" onClick={() => { setAddingIngredient(false); setNewIng(emptyIng) }}>
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAddingIngredient(true)}
+                    className="mt-2 w-full text-muted-foreground hover:text-foreground"
+                  >
+                    <Plus className="size-3.5" />
+                    {t("addIngredient")}
+                  </Button>
+                )}
               </CardContent>
               <CardFooter className="flex-col items-stretch gap-3">
                 {recipeSaved ? (

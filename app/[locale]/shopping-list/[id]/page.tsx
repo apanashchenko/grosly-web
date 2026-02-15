@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { setRequestLocale } from "next-intl/server"
 import { ShoppingListDetail } from "@/components/shopping-list/shopping-list-detail"
 
@@ -9,5 +10,9 @@ export default async function ShoppingListDetailPage({
   const { locale, id } = await params
   setRequestLocale(locale)
 
-  return <ShoppingListDetail listId={id} />
+  return (
+    <Suspense>
+      <ShoppingListDetail listId={id} />
+    </Suspense>
+  )
 }

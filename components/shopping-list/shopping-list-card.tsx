@@ -81,6 +81,7 @@ interface Props {
   isPinned?: boolean
   onTogglePin?: () => void
   pinLabel?: string
+  deleteButtonLabel?: string
   deleteTitle?: string
   deleteDescription?: string
   deleteConfirm?: string
@@ -126,6 +127,7 @@ export function ShoppingListCard({
   pinLabel,
   onShareToSpace,
   shareToSpaceLabel,
+  deleteButtonLabel,
   deleteTitle,
   deleteDescription,
   deleteConfirm,
@@ -505,6 +507,7 @@ export function ShoppingListCard({
                   className="w-full mt-3 text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="size-4" />
+                  {deleteButtonLabel}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

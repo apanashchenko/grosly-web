@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { SuggestRecipesResponse } from "@/lib/types"
+import { UNITS, type SuggestRecipesResponse, type SuggestedRecipe, type RecipeIngredient } from "@/lib/types"
 import { suggestRecipes, streamSuggestRecipes, createShoppingList, saveRecipe } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
 import { useStream } from "@/hooks/use-stream"
@@ -45,7 +45,8 @@ export function RecipeSuggester() {
   const t = useTranslations("RecipeSuggester")
   const tSave = useTranslations("SavedRecipes")
   const locale = useLocale()
-  const { categoryMap } = useCategories()
+  const tList = useTranslations("ShoppingList")
+  const { categories, categoryMap } = useCategories()
 
   const [ingredients, setIngredients] = useState<string[]>([])
   const [currentIngredient, setCurrentIngredient] = useState("")
@@ -61,6 +62,7 @@ export function RecipeSuggester() {
   const [savingRecipe, setSavingRecipe] = useState(false)
   const [recipeToSave, setRecipeToSave] = useState<number | null>(null)
   const [savedRecipeIndexes, setSavedRecipeIndexes] = useState<Set<number>>(new Set())
+  const [editedRecipes, setEditedRecipes] = useState<Map<number, SuggestedRecipe>>(new Map())
 
   const stream = useStream<SuggestRecipesResponse>()
   const { abort } = stream
@@ -75,6 +77,7 @@ export function RecipeSuggester() {
       setCheckedItems(new Set())
       setSavedSuccess(false)
       setSavedRecipeIndexes(new Set())
+      setEditedRecipes(new Map())
     }
   }, [stream.result])
 
@@ -93,7 +96,7 @@ export function RecipeSuggester() {
 
   async function handleSaveRecipe(opts: { title: string }) {
     if (recipeToSave === null || !stream.result) return
-    const recipe = stream.result.suggestedRecipes[recipeToSave]
+    const recipe = editedRecipes.get(recipeToSave) ?? stream.result.suggestedRecipes[recipeToSave]
     if (!recipe) return
 
     setSavingRecipe(true)
@@ -137,10 +140,28 @@ export function RecipeSuggester() {
   // Use partial data during streaming, full result after done
   const partialSuggested = stream.partial?.suggestedRecipes ?? []
   const displayRecipes = stream.result?.suggestedRecipes ?? partialSuggested
+  const isDone = !!stream.result
+
+  const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
+  const categoryOpts = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+    icon: c.icon,
+  }))
+
+  function getEditedRecipe(index: number): SuggestedRecipe {
+    return editedRecipes.get(index) ?? displayRecipes[index]
+  }
+
+  function updateRecipe(index: number, updater: (r: SuggestedRecipe) => SuggestedRecipe) {
+    const base = editedRecipes.get(index) ?? structuredClone(displayRecipes[index])
+    if (!base) return
+    setEditedRecipes((prev) => new Map(prev).set(index, updater(base)))
+  }
 
   const selectedRecipe =
     selectedRecipeIndex !== null
-      ? stream.result?.suggestedRecipes[selectedRecipeIndex] ?? null
+      ? getEditedRecipe(selectedRecipeIndex) ?? null
       : null
 
   const additionalItems = selectedRecipe?.additionalIngredients ?? []
@@ -272,7 +293,7 @@ export function RecipeSuggester() {
         </Card>
 
         {/* Right column — suggested recipes */}
-        <div className="space-y-6">
+        <div className="relative space-y-6">
           {/* Streaming status */}
           {stream.isStreaming && !partialSuggested.length && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -281,53 +302,81 @@ export function RecipeSuggester() {
             </div>
           )}
 
-          {stream.result && stream.result.suggestedRecipes.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {t("recipesFound", { count: stream.result.suggestedRecipes.length })}
-            </p>
+          {isDone && displayRecipes.length > 0 && (
+            <span className="absolute -top-5 right-0 text-xs text-muted-foreground">
+              {t("recipesFound", { count: displayRecipes.length })}
+            </span>
           )}
 
           {displayRecipes.map((recipe, index) => {
             if (!recipe.dishName) return null
+            const edited = getEditedRecipe(index)
             const isSelected = selectedRecipeIndex === index
-            const isDone = !!stream.result
             return (
               <div key={index} className="space-y-3">
                 <RecipeCard
-                  dishName={recipe.dishName}
-                  description={recipe.description ?? ""}
+                  dishName={edited.dishName}
+                  description={edited.description ?? ""}
                   cookingTimeLabel={
-                    recipe.cookingTime
-                      ? t("cookingTime", { time: recipe.cookingTime })
+                    edited.cookingTime
+                      ? t("cookingTime", { time: edited.cookingTime })
                       : undefined
                   }
-                  ingredients={recipe.ingredients ?? []}
-                  instructions={recipe.instructions ?? []}
+                  ingredients={edited.ingredients ?? []}
+                  instructions={edited.instructions ?? []}
                   instructionsLabel={t("instructionsLabel")}
-                  highlightIngredients={recipe.matchedIngredients}
+                  highlightIngredients={edited.matchedIngredients}
                   defaultOpen={false}
                   categoryMap={categoryMap}
+                  {...(isDone && {
+                    cookingTime: edited.cookingTime,
+                    onEditCookingTime: (time: number) => updateRecipe(index, (r) => ({ ...r, cookingTime: time })),
+                    onEditDishName: (name: string) => updateRecipe(index, (r) => ({ ...r, dishName: name })),
+                    onEditDescription: (desc: string) => updateRecipe(index, (r) => ({ ...r, description: desc })),
+                    onEditIngredient: (idx: number, data: RecipeIngredient) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) })),
+                    onDeleteIngredient: (idx: number) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) })),
+                    onAddIngredient: (data: RecipeIngredient) =>
+                      updateRecipe(index, (r) => ({ ...r, ingredients: [...r.ingredients, data] })),
+                    onEditInstruction: (idx: number, text: string) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: (r.instructions ?? []).map((s, i) => i === idx ? { ...s, text } : s) })),
+                    onDeleteInstruction: (idx: number) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: (r.instructions ?? []).filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) })),
+                    onAddInstruction: (text: string) =>
+                      updateRecipe(index, (r) => ({ ...r, instructions: [...(r.instructions ?? []), { step: (r.instructions ?? []).length + 1, text }] })),
+                    unitOptions,
+                    categoryOptions: categoryOpts,
+                    ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
+                    qtyPlaceholder: t("qtyPlaceholder"),
+                    unitPlaceholder: t("unitPlaceholder"),
+                    categoryPlaceholder: t("categoryPlaceholder"),
+                    addIngredientLabel: t("addIngredient"),
+                    addStepLabel: t("addStep"),
+                    stepPlaceholder: t("stepPlaceholder"),
+                    noCategoryLabel: tList("noCategory"),
+                  })}
                   footer={
                     isDone ? (
                       <div className="flex w-full flex-col gap-3">
-                        {recipe.matchedIngredients && recipe.matchedIngredients.length > 0 && (
+                        {edited.matchedIngredients && edited.matchedIngredients.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             <span className="text-sm font-medium text-primary">
                               {t("youHave")}:
                             </span>
-                            {recipe.matchedIngredients.map((name) => (
+                            {edited.matchedIngredients.map((name) => (
                               <Badge key={name} variant="default">
                                 {name}
                               </Badge>
                             ))}
                           </div>
                         )}
-                        {recipe.additionalIngredients && recipe.additionalIngredients.length > 0 && (
+                        {edited.additionalIngredients && edited.additionalIngredients.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             <span className="text-sm font-medium text-muted-foreground">
                               {t("youNeed")}:
                             </span>
-                            {recipe.additionalIngredients.map((name) => (
+                            {edited.additionalIngredients.map((name) => (
                               <Badge key={name} variant="outline">
                                 {name}
                               </Badge>
@@ -444,7 +493,7 @@ export function RecipeSuggester() {
         saving={savingRecipe}
         defaultTitle={
           recipeToSave !== null
-            ? stream.result?.suggestedRecipes[recipeToSave]?.dishName
+            ? getEditedRecipe(recipeToSave)?.dishName ?? ""
             : ""
         }
 

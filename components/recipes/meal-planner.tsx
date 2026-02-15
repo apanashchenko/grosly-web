@@ -10,7 +10,7 @@ import {
   ClipboardList,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { GeneratedMealPlanResponse } from "@/lib/types"
+import { UNITS, type GeneratedMealPlanResponse, type GeneratedRecipe, type RecipeIngredient } from "@/lib/types"
 import { generateMealPlan, streamMealPlan, createMealPlan } from "@/lib/api"
 import { useCategories } from "@/hooks/use-categories"
 import { useStream } from "@/hooks/use-stream"
@@ -27,6 +27,15 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { RecipeCard } from "@/components/recipes/recipe-card"
@@ -35,14 +44,18 @@ const MAX_LENGTH = 500
 
 export function MealPlanner() {
   const t = useTranslations("MealPlanner")
+  const tList = useTranslations("ShoppingList")
   const locale = useLocale()
-  const { categoryMap } = useCategories()
+  const { categories, categoryMap } = useCategories()
 
   const [query, setQuery] = useState("")
   const [queryOpen, setQueryOpen] = useState(true)
   const [savingPlan, setSavingPlan] = useState(false)
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null)
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [planName, setPlanName] = useState("")
   const [includedRecipes, setIncludedRecipes] = useState<Set<number>>(new Set())
+  const [editedRecipes, setEditedRecipes] = useState<Map<number, GeneratedRecipe>>(new Map())
 
   const stream = useStream<GeneratedMealPlanResponse>()
   const { abort } = stream
@@ -54,6 +67,7 @@ export function MealPlanner() {
   useEffect(() => {
     if (stream.result) {
       setIncludedRecipes(new Set(stream.result.recipes.map((_, i) => i)))
+      setEditedRecipes(new Map(stream.result.recipes.map((r, i) => [i, structuredClone(r)])))
     }
   }, [stream.result])
 
@@ -61,8 +75,22 @@ export function MealPlanner() {
   const isOverLimit = charCount > MAX_LENGTH
   const isSubmitDisabled = charCount < 3 || isOverLimit || stream.isLoading
 
+  function getEditedRecipe(index: number): GeneratedRecipe {
+    return editedRecipes.get(index) ?? stream.result!.recipes[index]
+  }
+
+  function updateRecipe(index: number, updater: (r: GeneratedRecipe) => GeneratedRecipe) {
+    setEditedRecipes((prev) => {
+      const next = new Map(prev)
+      const current = next.get(index) ?? stream.result!.recipes[index]
+      next.set(index, updater(current))
+      return next
+    })
+  }
+
   function handleGenerate() {
     setSavedPlanId(null)
+    setEditedRecipes(new Map())
     stream.start(
       (callbacks, signal) =>
         streamMealPlan(query, locale, callbacks, signal),
@@ -83,8 +111,11 @@ export function MealPlanner() {
     if (!stream.result || includedRecipes.size === 0) return
     setSavingPlan(true)
     try {
-      const selected = stream.result.recipes.filter((_, i) => includedRecipes.has(i))
+      const selected = stream.result.recipes
+        .map((_, i) => getEditedRecipe(i))
+        .filter((_, i) => includedRecipes.has(i))
       const plan = await createMealPlan({
+        name: planName.trim() || t("defaultPlanName", { date: new Date().toLocaleDateString("sv-SE") }),
         numberOfDays: stream.result.parsedRequest.numberOfDays,
         numberOfPeople: stream.result.parsedRequest.numberOfPeople,
         ...(stream.result.description && { description: stream.result.description }),
@@ -103,6 +134,7 @@ export function MealPlanner() {
       })
 
       setSavedPlanId(plan.id)
+      setSaveDialogOpen(false)
     } catch {
       // save error handled silently
     } finally {
@@ -114,6 +146,14 @@ export function MealPlanner() {
   const partialRecipes = stream.partial?.recipes ?? []
   const displayRecipes = stream.result?.recipes ?? partialRecipes
   const displayParsedRequest = stream.result?.parsedRequest ?? stream.partial?.parsedRequest
+  const isDone = !!stream.result
+
+  const unitOptions = UNITS.map((u) => ({ value: u, label: tList(`units.${u}`) }))
+  const categoryOptions = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+    icon: c.icon,
+  }))
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -175,15 +215,11 @@ export function MealPlanner() {
                 </Button>
                 {stream.result && includedRecipes.size > 0 && !savedPlanId && (
                   <Button
-                    onClick={handleSavePlan}
-                    disabled={savingPlan}
+                    onClick={() => { setPlanName(""); setSaveDialogOpen(true) }}
                     variant="outline"
                   >
-                    {savingPlan && <LoaderCircle className="animate-spin" />}
                     <ClipboardList className="size-4" />
-                    {savingPlan
-                      ? t("savingPlan")
-                      : t("savePlanButton", { count: includedRecipes.size })}
+                    {t("savePlanButton", { count: includedRecipes.size })}
                   </Button>
                 )}
                 {savedPlanId && (
@@ -244,22 +280,45 @@ export function MealPlanner() {
           )}
 
           {/* Recipe cards — renders during streaming (partial) and after done (full) */}
-          {displayRecipes.map((recipe, index) => (
-            recipe.dishName && (
+          {displayRecipes.map((recipe, index) => {
+            if (!recipe.dishName) return null
+            const edited = isDone ? getEditedRecipe(index) : recipe
+            return (
               <RecipeCard
                 key={index}
-                dishName={recipe.dishName}
-                description={recipe.description ?? ""}
+                dishName={edited.dishName}
+                description={edited.description ?? ""}
                 cookingTimeLabel={
-                  recipe.cookingTime
-                    ? t("cookingTime", { time: recipe.cookingTime })
+                  edited.cookingTime
+                    ? t("cookingTime", { time: edited.cookingTime })
                     : undefined
                 }
-                ingredients={recipe.ingredients ?? []}
-                instructions={recipe.instructions ?? []}
+                ingredients={edited.ingredients ?? []}
+                instructions={edited.instructions ?? []}
                 instructionsLabel={t("instructionsLabel")}
                 defaultOpen={false}
                 categoryMap={categoryMap}
+                {...(isDone && {
+                  cookingTime: edited.cookingTime,
+                  onEditCookingTime: (time: number) => updateRecipe(index, (r) => ({ ...r, cookingTime: time })),
+                  onEditDishName: (name: string) => updateRecipe(index, (r) => ({ ...r, dishName: name })),
+                  onEditDescription: (desc: string) => updateRecipe(index, (r) => ({ ...r, description: desc })),
+                  onEditIngredient: (idx: number, data: RecipeIngredient) => updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.map((ing, i) => i === idx ? data : ing) })),
+                  onDeleteIngredient: (idx: number) => updateRecipe(index, (r) => ({ ...r, ingredients: r.ingredients.filter((_, i) => i !== idx) })),
+                  onAddIngredient: (data: RecipeIngredient) => updateRecipe(index, (r) => ({ ...r, ingredients: [...r.ingredients, data] })),
+                  onEditInstruction: (idx: number, text: string) => updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.map((s, i) => i === idx ? { ...s, text } : s) })),
+                  onDeleteInstruction: (idx: number) => updateRecipe(index, (r) => ({ ...r, instructions: r.instructions.filter((_, i) => i !== idx).map((s, i) => ({ ...s, step: i + 1 })) })),
+                  onAddInstruction: (text: string) => updateRecipe(index, (r) => ({ ...r, instructions: [...r.instructions, { step: r.instructions.length + 1, text }] })),
+                  unitOptions,
+                  categoryOptions,
+                  ingredientNamePlaceholder: t("ingredientNamePlaceholder"),
+                  qtyPlaceholder: t("qtyPlaceholder"),
+                  unitPlaceholder: t("unitPlaceholder"),
+                  categoryPlaceholder: t("categoryPlaceholder"),
+                  addIngredientLabel: t("addIngredient"),
+                  addStepLabel: t("addStep"),
+                  stepPlaceholder: t("stepPlaceholder"),
+                })}
                 footer={
                   stream.result && !savedPlanId ? (
                     <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
@@ -275,7 +334,7 @@ export function MealPlanner() {
                 }
               />
             )
-          ))}
+          })}
 
           {stream.result && stream.result.recipes.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 bg-muted/20 px-4 py-16">
@@ -288,6 +347,33 @@ export function MealPlanner() {
 
         </div>
       </div>
+
+      {/* Save plan dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("savePlanDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("savePlanDialogDescription")}</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={planName}
+            onChange={(e) => setPlanName(e.target.value)}
+            placeholder={t("planNamePlaceholder")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); handleSavePlan() }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleSavePlan} disabled={savingPlan}>
+              {savingPlan && <LoaderCircle className="animate-spin" />}
+              {savingPlan ? t("savingPlan") : t("savePlanConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </main>
   )

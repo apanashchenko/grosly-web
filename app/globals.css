@@ -120,12 +120,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html, body {
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
-    background-image: linear-gradient(135deg, var(--background) 0%, oklch(0.97 0.015 140) 100%);
-    background-attachment: fixed;
   }
-  .dark body {
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: linear-gradient(135deg, var(--background) 0%, oklch(0.97 0.015 140) 100%);
+    pointer-events: none;
+  }
+  .dark body::before {
     background-image: linear-gradient(135deg, var(--background) 0%, oklch(0.18 0.012 145) 100%);
   }
 }

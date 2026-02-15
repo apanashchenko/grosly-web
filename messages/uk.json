@@ -63,7 +63,9 @@
     "cancel": "Скасувати",
     "saving": "Збереження...",
     "savedSuccess": "Список створено",
-    "viewShoppingLists": "Переглянути списки"
+    "viewShoppingLists": "Переглянути списки",
+    "addIngredient": "Додати інгредієнт",
+    "ingredientNamePlaceholder": "Назва інгредієнта"
   },
   "ShoppingList": {
     "heading": "Список покупок",
@@ -118,6 +120,7 @@
     "loadingMore": "Завантаження...",
     "backToLists": "До списків",
     "openList": "Відкрити",
+    "deleteListButton": "Видалити список",
     "deleteListTitle": "Видалити список покупок?",
     "deleteListDescription": "Список покупок буде видалено назавжди. Цю дію не можна скасувати.",
     "deleteListConfirm": "Видалити",
@@ -157,7 +160,14 @@
     "createShoppingList": "Створити список покупок",
     "createListDescription": "Введіть назву або залиште порожнім для автоматичної назви.",
     "listNamePlaceholder": "Назва списку (необов'язково)",
-    "cancel": "Скасувати"
+    "cancel": "Скасувати",
+    "ingredientNamePlaceholder": "Назва інгредієнта",
+    "qtyPlaceholder": "К-сть",
+    "unitPlaceholder": "Одиниця",
+    "categoryPlaceholder": "Категорія",
+    "addIngredient": "Додати інгредієнт",
+    "addStep": "Додати крок",
+    "stepPlaceholder": "Опис кроку"
   },
   "MealPlanner": {
     "heading": "План харчування",
@@ -190,7 +200,20 @@
     "savePlanButton": "Зберегти план ({count, plural, one {# рецепт} few {# рецепти} many {# рецептів} other {# рецептів}})",
     "savingPlan": "Збереження...",
     "planSaved": "План збережено!",
-    "streamingMessage": "Ми плануємо ваше меню..."
+    "streamingMessage": "Ми плануємо ваше меню...",
+    "ingredientNamePlaceholder": "Назва інгредієнта",
+    "qtyPlaceholder": "К-сть",
+    "unitPlaceholder": "Одиниця",
+    "categoryPlaceholder": "Категорія",
+    "addIngredient": "Додати інгредієнт",
+    "addStep": "Додати крок",
+    "stepPlaceholder": "Опис кроку",
+    "savePlanDialogTitle": "Зберегти план",
+    "savePlanDialogDescription": "Введіть назву для вашого плану харчування",
+    "planNamePlaceholder": "Назва плану (необов'язково)",
+    "cancel": "Скасувати",
+    "savePlanConfirm": "Зберегти",
+    "defaultPlanName": "План харчування {date}"
   },
   "RecipeSuggester": {
     "heading": "Підбір рецептів",
@@ -219,7 +242,14 @@
     "instructionsLabel": "Приготування",
     "noRecipes": "Рецепти для цих інгредієнтів не знайдено. Спробуйте інші.",
     "noRecipesStrict": "З цих інгредієнтів не вдалося скласти рецепт. Спробуйте вимкнути строгий режим або додати більше продуктів.",
-    "streamingMessage": "Ми підбираємо рецепти для вас..."
+    "streamingMessage": "Ми підбираємо рецепти для вас...",
+    "ingredientNamePlaceholder": "Назва інгредієнта",
+    "qtyPlaceholder": "К-сть",
+    "unitPlaceholder": "Одиниця",
+    "categoryPlaceholder": "Категорія",
+    "addIngredient": "Додати інгредієнт",
+    "addStep": "Додати крок",
+    "stepPlaceholder": "Опис кроку"
   },
   "Preferences": {
     "heading": "Вподобання",
