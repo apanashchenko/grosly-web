@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth"
+import { Logo } from "@/components/shared/logo"
 import { getMyInvitations } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
@@ -101,8 +102,9 @@ export function NavBar() {
     return (
       <nav className="border-b border-border/50 bg-background/80 backdrop-blur-md shadow-sm supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-          <span className="text-lg font-bold tracking-tight gradient-text">
-            {t("brand")}
+          <span className="inline-flex items-center gap-2">
+            <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
+            <Logo iconSize={22} />
           </span>
         </div>
       </nav>
@@ -120,7 +122,10 @@ export function NavBar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-72">
             <SheetHeader>
-              <SheetTitle className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</SheetTitle>
+              <SheetTitle className="inline-flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
+                <Logo iconSize={22} />
+              </SheetTitle>
               <SheetDescription>
                 {t("subtitle")}
               </SheetDescription>
@@ -209,8 +214,9 @@ export function NavBar() {
           </SheetContent>
         </Sheet>
 
-        <Link href="/" className="text-lg font-bold tracking-tight gradient-text">
-          {t("brand")}
+        <Link href="/" className="inline-flex items-center gap-2">
+          <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
+          <Logo iconSize={22} />
         </Link>
       </div>
     </nav>

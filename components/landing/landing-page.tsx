@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import { useAuth } from "@/lib/auth"
+import { Logo } from "@/components/shared/logo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -30,6 +31,7 @@ export function LandingPage() {
     <main className="mx-auto max-w-6xl px-4">
       {/* Hero */}
       <section className="flex flex-col items-center gap-6 py-16 text-center md:py-24">
+        <Logo iconSize={48} className="mb-2" />
         <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-5xl md:text-6xl">
           {t("heroTitle")}
         </h1>
