@@ -32,8 +32,8 @@ Google OAuth не працює через IP — потрібно перенес
 ```js
 console.log(
   JSON.stringify({
-    a: localStorage.getItem("grosly_access_token"),
-    r: localStorage.getItem("grosly_refresh_token"),
+    a: localStorage.getItem("access_token"),
+    r: localStorage.getItem("refresh_token"),
   }),
 );
 ```
@@ -46,8 +46,8 @@ console.log(
 2. В консолі Web Inspector вставити:
 
 ```js
-localStorage.setItem("grosly_access_token", "ACCESS_TOKEN_СЮДИ");
-localStorage.setItem("grosly_refresh_token", "REFRESH_TOKEN_СЮДИ");
+localStorage.setItem("access_token", "ACCESS_TOKEN_СЮДИ");
+localStorage.setItem("refresh_token", "REFRESH_TOKEN_СЮДИ");
 location.reload();
 ```
 
@@ -57,7 +57,7 @@ location.reload();
 2. В адресний рядок вставити (одним рядком):
 
 ```
-javascript:localStorage.setItem('grosly_access_token','ACCESS_TOKEN_СЮДИ');localStorage.setItem('grosly_refresh_token','REFRESH_TOKEN_СЮДИ');location.reload()
+javascript:localStorage.setItem('access_token','ACCESS_TOKEN_СЮДИ');localStorage.setItem('refresh_token','REFRESH_TOKEN_СЮДИ');location.reload()
 ```
 
 > **Увага**: iOS Chrome видаляє `javascript:` при вставці — потрібно дописати вручну перед вставленим текстом.

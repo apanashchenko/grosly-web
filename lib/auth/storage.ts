@@ -1,5 +1,5 @@
-const ACCESS_TOKEN_KEY = "grosly_access_token"
-const REFRESH_TOKEN_KEY = "grosly_refresh_token"
+const ACCESS_TOKEN_KEY = "access_token"
+const REFRESH_TOKEN_KEY = "refresh_token"
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null

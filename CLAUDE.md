@@ -1,4 +1,4 @@
-# Grosly Web
+# Plistum Web
 
 Recipe-to-grocery-list app with AI recipe generation and suggestion.
 
