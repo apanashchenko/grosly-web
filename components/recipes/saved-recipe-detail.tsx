@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Loader2,
   Pencil,
+  Plus,
   RefreshCw,
   ShoppingCart,
   Trash2,
@@ -65,6 +66,7 @@ import {
   getMealPlan,
   updateMealPlan,
   updateRecipe,
+  addRecipeIngredient,
   updateRecipeIngredient,
   deleteRecipeIngredient,
 } from "@/lib/api"
@@ -140,6 +142,8 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const [ingNote, setIngNote] = useState("")
   const [savingIngredient, setSavingIngredient] = useState(false)
   const [deletingIngId, setDeletingIngId] = useState<string | null>(null)
+  const [addingIngredient, setAddingIngredient] = useState(false)
+  const [addingIngLoading, setAddingIngLoading] = useState(false)
 
   const fetchRecipe = useCallback(async () => {
     setLoading(true)
@@ -267,6 +271,37 @@ export function SavedRecipeDetail({ recipeId }: Props) {
       toast.error(Array.isArray(msg) ? msg[0] : msg)
     } finally {
       setDeletingIngId(null)
+    }
+  }
+
+  function startAddIngredient() {
+    resetIngForm()
+    setAddingIngredient(true)
+  }
+
+  async function handleAddIngredient() {
+    if (!recipe) return
+    const trimmedName = ingName.trim()
+    if (!trimmedName) return
+
+    setAddingIngLoading(true)
+    try {
+      await addRecipeIngredient(recipeId, {
+        name: trimmedName,
+        quantity: ingQuantity ? Number(ingQuantity) : 0,
+        unit: ingUnit || "pcs",
+        ...(ingCategoryId !== NONE_CATEGORY ? { categoryId: ingCategoryId } : {}),
+        ...(ingNote.trim() ? { note: ingNote.trim() } : {}),
+      })
+      resetIngForm()
+      setAddingIngredient(false)
+      const fresh = await getSavedRecipe(recipeId)
+      setRecipe(fresh)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("unexpectedError")
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setAddingIngLoading(false)
     }
   }
 
@@ -622,7 +657,17 @@ export function SavedRecipeDetail({ recipeId }: Props) {
             {/* Ingredients card */}
             <Card>
               <CardHeader>
-                <CardTitle>{t("ingredientsTitle")}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{t("ingredientsTitle")}</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={startAddIngredient}
+                    disabled={editingIngId !== null || addingIngredient}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
                 {recipe.ingredients.length > 0 && (
                   <CardDescription>
                     {t("ingredientsCount", { count: recipe.ingredients.length })}
@@ -775,6 +820,108 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                     {t("noIngredients")}
                   </p>
                 )}
+                {/* Add ingredient form */}
+                {addingIngredient && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleAddIngredient()
+                    }}
+                    className="space-y-2 rounded-lg border bg-muted/30 p-3"
+                  >
+                    <Input
+                      value={ingName}
+                      onChange={(e) => setIngName(e.target.value)}
+                      placeholder={t("ingredientNamePlaceholder")}
+                      autoFocus
+                    />
+                    <div className="flex gap-1.5">
+                      <Input
+                        type="number"
+                        value={ingQuantity}
+                        onChange={(e) => setIngQuantity(e.target.value)}
+                        placeholder={tList("qtyPlaceholder")}
+                        min={0}
+                        step="any"
+                        className="w-16 text-sm"
+                      />
+                      <Select value={ingUnit} onValueChange={setIngUnit}>
+                        <SelectTrigger className="w-20 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {unitOptions.map((u) => (
+                              <SelectItem key={u.value} value={u.value}>
+                                {u.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {categoryOptions.length > 0 && (
+                        <Select value={ingCategoryId} onValueChange={setIngCategoryId}>
+                          <SelectTrigger className="flex-1 text-sm">
+                            <SelectValue placeholder={t("categoryPlaceholder")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value={NONE_CATEGORY}>—</SelectItem>
+                              {categoryOptions.map((c) => (
+                                <SelectItem key={c.value} value={c.value}>
+                                  {c.icon ? `${c.icon} ${c.label}` : c.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <Input
+                      value={ingNote}
+                      onChange={(e) => setIngNote(e.target.value)}
+                      placeholder={t("notePlaceholder")}
+                      className="text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          resetIngForm()
+                          setAddingIngredient(false)
+                        }}
+                        disabled={addingIngLoading}
+                      >
+                        {t("editCancel")}
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        className="flex-1"
+                        disabled={!ingName.trim() || addingIngLoading}
+                      >
+                        {addingIngLoading && <Loader2 className="size-4 animate-spin" />}
+                        {t("addIngredientButton")}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {!addingIngredient && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={startAddIngredient}
+                    disabled={editingIngId !== null}
+                  >
+                    <Plus className="size-4" />
+                    {t("addIngredient")}
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   className="w-full"

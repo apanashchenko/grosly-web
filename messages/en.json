@@ -420,6 +420,7 @@
     "editRecipe": "Edit",
     "editIngredients": "Edit",
     "ingredientNamePlaceholder": "Ingredient name",
+    "addIngredient": "Add ingredient",
     "addIngredientButton": "Add",
     "categoryPlaceholder": "Category",
     "notePlaceholder": "Note (optional)"

@@ -8,6 +8,7 @@ import type {
   SavedRecipeListItem,
   UpdateRecipeRequest,
   UpdateRecipeIngredientRequest,
+  RecipeIngredientInput,
   RecipeIngredientResponse,
   PaginatedResponse,
   PaginationParams,
@@ -110,6 +111,13 @@ export function updateRecipeIngredient(recipeId: string, ingredientId: string, d
   return request<RecipeIngredientResponse>(
     `/recipes/${encodeURIComponent(recipeId)}/ingredients/${encodeURIComponent(ingredientId)}`,
     { method: "PATCH", body: JSON.stringify(data) },
+  )
+}
+
+export function addRecipeIngredient(recipeId: string, data: RecipeIngredientInput) {
+  return request<RecipeIngredientResponse>(
+    `/recipes/${encodeURIComponent(recipeId)}/ingredients`,
+    { method: "POST", body: JSON.stringify(data) },
   )
 }
 
