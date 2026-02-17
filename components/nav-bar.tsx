@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Link, usePathname } from "@/i18n/navigation"
 import {
+  BarChart3,
   Bookmark,
   ChefHat,
   Sparkles,
@@ -77,6 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: "settings",
     items: [
+      { href: "/analytics", icon: BarChart3, key: "analytics" },
       { href: "/categories", icon: Tag, key: "categories" },
       { href: "/preferences", icon: Settings, key: "preferences" },
     ],
