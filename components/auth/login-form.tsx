@@ -71,7 +71,7 @@ export function LoginForm() {
     <main className="mx-auto flex max-w-md flex-col items-center gap-8 px-4 py-12 md:py-20">
       {/* Page header */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl gradient-text">
+        <h1 className="text-4xl font-bold tracking-tight md:text-5xl text-primary">
           {t("heading")}
         </h1>
         <p className="max-w-md text-lg text-muted-foreground">

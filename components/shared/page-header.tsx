@@ -1,7 +1,7 @@
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <header className="mb-12 text-center">
-      <h1 className="text-4xl font-bold tracking-tight md:text-5xl gradient-text">
+      <h1 className="text-4xl font-bold tracking-tight md:text-5xl text-primary">
         {title}
       </h1>
       {subtitle && (

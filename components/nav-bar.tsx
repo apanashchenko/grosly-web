@@ -105,8 +105,8 @@ export function NavBar() {
       <nav className="border-b border-border/50 bg-background/80 backdrop-blur-md shadow-sm supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
           <span className="inline-flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
             <Logo iconSize={22} />
+            <span className="text-lg font-extrabold tracking-tight text-primary">{t("brand")}</span>
           </span>
         </div>
       </nav>
@@ -125,7 +125,7 @@ export function NavBar() {
           <SheetContent side="left" className="w-72">
             <SheetHeader>
               <SheetTitle className="inline-flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
+                <span className="text-lg font-extrabold tracking-tight text-primary">{t("brand")}</span>
                 <Logo iconSize={22} />
               </SheetTitle>
               <SheetDescription>
@@ -217,8 +217,8 @@ export function NavBar() {
         </Sheet>
 
         <Link href="/" className="inline-flex items-center gap-2">
-          <span className="text-lg font-bold tracking-tight gradient-text">{t("brand")}</span>
           <Logo iconSize={22} />
+          <span className="text-lg font-extrabold tracking-tight text-primary">{t("brand")}</span>
         </Link>
       </div>
     </nav>

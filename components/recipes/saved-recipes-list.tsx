@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl"
 import {
   Bookmark,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
   X,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
-import { useRouter } from "@/i18n/navigation"
+import { Link, useRouter } from "@/i18n/navigation"
 import { getSavedRecipes } from "@/lib/api"
 import type { RecipeSource, SavedRecipeListItem } from "@/lib/types"
 import { usePaginatedList } from "@/hooks/use-paginated-list"
@@ -102,6 +103,15 @@ export function SavedRecipesList() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <PageHeader title={t("heading")} subtitle={t("subtitle")} />
+
+      <div className="mb-6 flex justify-end">
+        <Button asChild>
+          <Link href="/recipes/new">
+            <Plus className="size-4" />
+            {t("createRecipe")}
+          </Link>
+        </Button>
+      </div>
 
       {/* Search + filter */}
       <div className="mb-4 flex gap-2">

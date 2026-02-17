@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Script from "next/script"
-import { Nunito_Sans, Geist_Mono } from "next/font/google"
+import { Nunito, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider, hasLocale } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { notFound } from "next/navigation"
@@ -10,9 +10,9 @@ import { NavBar } from "@/components/nav-bar"
 import { Toaster } from "@/components/ui/sonner"
 import "../globals.css"
 
-const nunitoSans = Nunito_Sans({
+const nunito = Nunito({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-sans",
+  variable: "--font-nunito",
 })
 
 const geistMono = Geist_Mono({
@@ -53,7 +53,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale)
 
   return (
-    <html lang={locale} className={nunitoSans.variable}>
+    <html lang={locale} className={nunito.variable}>
       <head>
         <Script
           src="https://accounts.google.com/gsi/client"
@@ -61,7 +61,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         />
       </head>
       <body
-        className={`${geistMono.variable} antialiased`}
+        className={`${nunito.className} ${geistMono.variable} antialiased`}
       >
         <NextIntlClientProvider>
           <AuthProvider>

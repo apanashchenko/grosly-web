@@ -42,7 +42,7 @@ export function LandingPage() {
       {/* Hero */}
       <section className="flex flex-col items-center gap-6 py-16 text-center md:py-24">
         <Logo iconSize={48} className="mb-2" />
-        <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-5xl md:text-6xl">
+        <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-5xl md:text-6xl">
           {t("heroTitle")}
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground sm:text-xl">
@@ -56,7 +56,7 @@ export function LandingPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <Button
             size="lg"
-            className="bg-gradient-to-br from-primary to-primary/85 shadow-md active:scale-[0.98]"
+            className="shadow-md"
             asChild
           >
             <Link href={isAuthenticated ? "/parse" : "/login"}>
@@ -72,7 +72,7 @@ export function LandingPage() {
 
       {/* Features */}
       <section id="features" className="py-16">
-        <h2 className="mb-3 text-center text-3xl font-bold tracking-tight gradient-text">
+        <h2 className="mb-3 text-center text-3xl font-bold tracking-tight text-primary">
           {t("featuresTitle")}
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-center text-muted-foreground">
@@ -99,7 +99,7 @@ export function LandingPage() {
 
       {/* How It Works */}
       <section className="py-16">
-        <h2 className="mb-3 text-center text-3xl font-bold tracking-tight gradient-text">
+        <h2 className="mb-3 text-center text-3xl font-bold tracking-tight text-primary">
           {t("howItWorksTitle")}
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-center text-muted-foreground">
@@ -111,7 +111,7 @@ export function LandingPage() {
               key={step}
               className="flex flex-col items-center gap-4 text-center"
             >
-              <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/85 text-sm font-bold text-primary-foreground shadow-sm">
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm">
                 {index + 1}
               </div>
               <h3 className="text-base font-semibold">{t(`${step}.title`)}</h3>
@@ -135,7 +135,7 @@ export function LandingPage() {
             </p>
             <Button
               size="lg"
-              className="bg-gradient-to-br from-primary to-primary/85 shadow-md active:scale-[0.98]"
+              className="shadow-md"
               asChild
             >
               <Link href={isAuthenticated ? "/parse" : "/login"}>

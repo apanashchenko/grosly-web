@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { getAnalyticsOverview } from "@/lib/api"
 import type { ActivityPeriod, AnalyticsOverviewResponse } from "@/lib/types"
 import { TopProductsChart } from "./top-products-chart"
@@ -56,7 +57,7 @@ export function AnalyticsDashboard() {
     return `${capitalized} ${year}`
   }, [data?.activity, locale])
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <PageHeader title={t("heading")} subtitle={t("subtitle")} />
@@ -68,7 +69,7 @@ export function AnalyticsDashboard() {
     )
   }
 
-  if (loadError) {
+  if (loadError && !data) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <PageHeader title={t("heading")} subtitle={t("subtitle")} />
@@ -88,7 +89,7 @@ export function AnalyticsDashboard() {
       data.categoriesDistribution.length === 0 &&
       data.activity.every((a) => a.count === 0))
 
-  if (isEmpty) {
+  if (isEmpty && !loading) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
         <PageHeader title={t("heading")} subtitle={t("subtitle")} />
@@ -101,7 +102,31 @@ export function AnalyticsDashboard() {
     <main className="mx-auto max-w-3xl px-4 py-12">
       <PageHeader title={t("heading")} subtitle={t("subtitle")} />
 
-      <div className="space-y-6">
+      {/* Global period switcher */}
+      <div className="mb-6 flex justify-end">
+        <div className="flex gap-1 rounded-lg border border-border p-0.5">
+          <Button
+            variant={period === "week" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            disabled={loading}
+            onClick={() => setPeriod("week")}
+          >
+            {t("groupByWeek")}
+          </Button>
+          <Button
+            variant={period === "month" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            disabled={loading}
+            onClick={() => setPeriod("month")}
+          >
+            {t("groupByMonth")}
+          </Button>
+        </div>
+      </div>
+
+      <div className={cn("space-y-6 transition-opacity", loading && "pointer-events-none opacity-50")}>
         {/* Top Products */}
         <Card>
           <CardHeader>
@@ -109,7 +134,7 @@ export function AnalyticsDashboard() {
             <CardDescription>{t("topProductsDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <TopProductsChart data={data.topProducts} />
+            <TopProductsChart data={data!.topProducts} />
           </CardContent>
         </Card>
 
@@ -120,42 +145,18 @@ export function AnalyticsDashboard() {
             <CardDescription>{t("categoryDistributionDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <CategoryPieChart data={data.categoriesDistribution} />
+            <CategoryPieChart data={data!.categoriesDistribution} />
           </CardContent>
         </Card>
 
         {/* Activity */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{t("activityTitle")}</CardTitle>
-                <CardDescription>
-                  {activityPeriodLabel}
-                </CardDescription>
-              </div>
-              <div className="flex gap-1 rounded-lg border border-border p-0.5">
-                <Button
-                  variant={period === "week" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-3 text-xs"
-                  onClick={() => setPeriod("week")}
-                >
-                  {t("groupByWeek")}
-                </Button>
-                <Button
-                  variant={period === "month" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-3 text-xs"
-                  onClick={() => setPeriod("month")}
-                >
-                  {t("groupByMonth")}
-                </Button>
-              </div>
-            </div>
+            <CardTitle>{t("activityTitle")}</CardTitle>
+            <CardDescription>{activityPeriodLabel}</CardDescription>
           </CardHeader>
           <CardContent>
-            <ActivityChart data={data.activity} period={period} />
+            <ActivityChart data={data!.activity} period={period} />
           </CardContent>
         </Card>
       </div>

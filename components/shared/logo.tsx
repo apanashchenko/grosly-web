@@ -13,36 +13,32 @@ export function Logo({ className, iconSize = 24 }: LogoProps) {
       <svg
         width={iconSize}
         height={iconSize}
-        viewBox="0 0 32 32"
+        viewBox="0 0 120 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="flex-shrink-0"
       >
-        <defs>
-          <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2d9e46" />
-            <stop offset="100%" stopColor="#7cc68a" />
-          </linearGradient>
-        </defs>
-        {/* Cart basket */}
-        <rect x="6" y="12" width="20" height="13" rx="3" fill="url(#logo-grad)" />
-        {/* Cart wheels */}
-        <circle cx="11" cy="27.5" r="1.8" fill="url(#logo-grad)" />
-        <circle cx="22" cy="27.5" r="1.8" fill="url(#logo-grad)" />
-        {/* Cart handle */}
+        {/* Green leaf background */}
         <path
-          d="M3 3h3.5l2 9h15.5"
-          stroke="url(#logo-grad)"
-          strokeWidth="2.5"
+          d="M60 0C20 0 0 30 0 60c0 40 35 60 70 55 35-5 50-35 50-65C120 15 95 0 60 0z"
+          fill="#4CAF50"
+        />
+        {/* White paper */}
+        <path
+          d="M45 25h40c10 0 15 5 15 15v45c0 10-5 15-15 15H45c-10 0-15-5-15-15V40c0-10 5-15 15-15z"
+          fill="white"
+        />
+        {/* Paper lines */}
+        <rect x="45" y="40" width="35" height="6" rx="3" fill="#4CAF50" />
+        <rect x="45" y="55" width="25" height="6" rx="3" fill="#4CAF50" />
+        {/* Orange checkmark */}
+        <path
+          d="M45 75l15 15 35-35"
+          stroke="#F58220"
+          strokeWidth="10"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
-        />
-        {/* Leaf on cart */}
-        <path
-          d="M14 16c0-2.5 2.5-4.5 5.5-4.5-.8 1.8-2 3-3.5 4 0 0 1.3-.4 2.5-1.7-.4 1.8-2 3.5-4.5 4V16z"
-          fill="white"
-          opacity="0.9"
         />
       </svg>
     </span>

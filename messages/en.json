@@ -406,6 +406,7 @@
     "saveRecipe": "Save Recipe",
     "recipeSaved": "Recipe saved!",
     "viewSavedRecipes": "View saved recipes",
+    "createRecipe": "Create Recipe",
     "loadingMore": "Loading...",
     "inMealPlans": "Added to",
     "removedFromPlanToast": "Recipe removed from plan",

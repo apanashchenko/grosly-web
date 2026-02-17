@@ -23,8 +23,3 @@ export interface AnalyticsOverviewResponse {
   categoriesDistribution: CategoryDistributionItem[]
   activity: ActivityEntry[]
 }
-
-export interface AnalyticsParams {
-  topProductsLimit?: number
-  period?: ActivityPeriod
-}
