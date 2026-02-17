@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { RecipePickerDialog } from "@/components/meal-plans/recipe-picker-dialog"
+import { RecipeDetailContent } from "@/components/meal-plans/recipe-detail-content"
 import { ManualRecipeCreator } from "@/components/recipes/manual-recipe-creator"
 import { useRouter } from "@/i18n/navigation"
 import {
@@ -37,14 +38,7 @@ import {
 import type { SavedRecipeResponse, CreateMealPlanRecipeInput, ParsedIngredient } from "@/lib/types"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useCategories } from "@/hooks/use-categories"
-
-const SOURCE_STYLES: Record<string, string> = {
-  PARSED: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
-  GENERATED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
-  SUGGESTED: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
-  MANUAL: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
-  MEAL_PLAN: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
-}
+import { SOURCE_STYLES } from "@/lib/constants"
 
 interface NewRecipe {
   id: string
@@ -56,6 +50,7 @@ interface NewRecipe {
 export function ManualMealPlanCreator() {
   const t = useTranslations("MealPlans")
   const tSaved = useTranslations("SavedRecipes")
+  const tList = useTranslations("ShoppingList")
   const router = useRouter()
   const { localizeCategoryName } = useCategoryLocalization()
   const { categoryMap } = useCategories()
@@ -322,7 +317,7 @@ export function ManualMealPlanCreator() {
               <Card key={id}>
                 <CardHeader className="py-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    {recipe && recipe.ingredients.length > 0 && (
+                    {recipe && (recipe.ingredients.length > 0 || recipe.text) && (
                       <Button
                         variant="ghost"
                         size="icon-xs"
@@ -369,31 +364,21 @@ export function ManualMealPlanCreator() {
                     </Button>
                   </div>
                 </CardHeader>
-                {isExpanded && recipe && recipe.ingredients.length > 0 && (
+                {isExpanded && recipe && (recipe.ingredients.length > 0 || recipe.text) && (
                   <CardContent className="pt-0">
-                    <div className="divide-y">
-                      {recipe.ingredients.map((ing) => (
-                        <div
-                          key={ing.id}
-                          className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
-                        >
-                          <span className="min-w-0 flex-1 truncate">
-                            {ing.name}
-                          </span>
-                          <span className="shrink-0 tabular-nums text-xs">
-                            {ing.quantity} {ing.unit}
-                          </span>
-                          {ing.category && (
-                            <span className="shrink-0 text-xs">
-                              {ing.category.icon ?? ""}{" "}
-                              {localizeCategoryName(
-                                categoryMap.get(ing.category.id) ?? ing.category
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    <RecipeDetailContent
+                      text={recipe.text}
+                      ingredients={recipe.ingredients.map((ing) => ({
+                        key: ing.id,
+                        name: ing.name,
+                        quantity: ing.quantity,
+                        unit: ing.unit ? tList(`units.${ing.unit}`) : "",
+                        categoryLabel: ing.category
+                          ? `${ing.category.icon ?? ""} ${localizeCategoryName(categoryMap.get(ing.category.id) ?? ing.category)}`.trim()
+                          : null,
+                      }))}
+                      ingredientsTitle={recipe.text && recipe.ingredients.length > 0 ? tSaved("ingredientsTitle") : undefined}
+                    />
                   </CardContent>
                 )}
               </Card>
@@ -445,29 +430,17 @@ export function ManualMealPlanCreator() {
                   </div>
                 </CardHeader>
                 {isExpanded && (
-                  <CardContent className="pt-0 space-y-2">
-                    {recipe.ingredients.length > 0 && (
-                      <div className="divide-y">
-                        {recipe.ingredients.map((ing, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground"
-                          >
-                            <span className="min-w-0 flex-1 truncate">
-                              {ing.name}
-                            </span>
-                            <span className="shrink-0 tabular-nums text-xs">
-                              {ing.quantity ?? 0} {ing.unit}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {recipe.ingredients.length === 0 && recipe.text && (
-                      <p className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed">
-                        {recipe.text}
-                      </p>
-                    )}
+                  <CardContent className="pt-0">
+                    <RecipeDetailContent
+                      text={recipe.text}
+                      ingredients={recipe.ingredients.map((ing, idx) => ({
+                        key: idx,
+                        name: ing.name,
+                        quantity: ing.quantity,
+                        unit: ing.localizedUnit || (ing.unit ? tList(`units.${ing.unit}`) : ""),
+                      }))}
+                      ingredientsTitle={recipe.text && recipe.ingredients.length > 0 ? tSaved("ingredientsTitle") : undefined}
+                    />
                   </CardContent>
                 )}
               </Card>

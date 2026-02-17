@@ -101,11 +101,15 @@ export function MealPlanPickerDialog({
             <EmptyState icon={ClipboardList} message={error} variant="error" />
           )}
 
-          {!loading && !error && plans.length === 0 && (
-            <EmptyState icon={ClipboardList} message={t("addToMealPlanEmpty")} />
-          )}
+          {(() => {
+            const available = plans.filter((p) => !excludePlanIds.includes(p.id))
+            return (
+              <>
+                {!loading && !error && available.length === 0 && (
+                  <EmptyState icon={ClipboardList} message={t("addToMealPlanEmpty")} />
+                )}
 
-          {plans.filter((p) => !excludePlanIds.includes(p.id)).map((plan) => {
+                {available.map((plan) => {
             const isAdding = addingToPlanId === plan.id
             return (
               <button
@@ -152,6 +156,9 @@ export function MealPlanPickerDialog({
               </button>
             )
           })}
+              </>
+            )
+          })()}
 
           {hasMore && <div ref={sentinelRef} />}
           {loadingMore && (

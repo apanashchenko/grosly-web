@@ -12,6 +12,7 @@ export interface CreateShoppingListRequest {
   name?: string
   label?: string
   items: ShoppingListItemRequest[]
+  groupedByCategories?: boolean
 }
 
 export interface ItemPosition {

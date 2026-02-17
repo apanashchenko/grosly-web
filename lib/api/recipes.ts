@@ -121,6 +121,13 @@ export function addRecipeIngredient(recipeId: string, data: RecipeIngredientInpu
   )
 }
 
+export function duplicateRecipes(ids: string[]) {
+  return request<SavedRecipeResponse[]>("/recipes/duplicate", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  })
+}
+
 export function deleteRecipeIngredient(recipeId: string, ingredientId: string) {
   return request<void>(
     `/recipes/${encodeURIComponent(recipeId)}/ingredients/${encodeURIComponent(ingredientId)}`,

@@ -19,7 +19,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
-import { Loader2, Plus, ShoppingCart } from "lucide-react"
+import { BookOpen, Layers, Loader2, Plus, ShoppingCart } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -39,9 +40,11 @@ import {
 } from "@/components/ui/select"
 import { PageHeader } from "@/components/shared/page-header"
 import { SortableItem } from "./sortable-item"
+import { GroupedItems } from "./category-group"
+import { RecipePickerDialog } from "@/components/meal-plans/recipe-picker-dialog"
 import type { ItemData } from "./types"
 import { useRouter } from "@/i18n/navigation"
-import { createShoppingList, getCategories } from "@/lib/api"
+import { createShoppingList, getCategories, getSavedRecipe } from "@/lib/api"
 import { UNITS, type Category, type ShoppingListItemRequest } from "@/lib/types"
 import { NONE_CATEGORY } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
@@ -77,6 +80,9 @@ export function ShoppingListNew() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recipePickerOpen, setRecipePickerOpen] = useState(false)
+  const [addingFromRecipes, setAddingFromRecipes] = useState(false)
+  const [grouped, setGrouped] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -143,6 +149,29 @@ export function ShoppingListNew() {
     setPendingItems((prev) => prev.filter((item) => item.id !== id))
   }
 
+  async function handleRecipePickerAdd(recipeIds: string[]) {
+    setAddingFromRecipes(true)
+    try {
+      const details = await Promise.all(recipeIds.map((id) => getSavedRecipe(id)))
+      const newItems: PendingItem[] = details.flatMap((recipe) =>
+        recipe.ingredients.map((ing) => ({
+          id: nextPendingId++,
+          name: ing.name,
+          quantity: ing.quantity || null,
+          unit: ing.unit || null,
+          categoryId: ing.category?.id ?? null,
+          note: ing.note,
+        }))
+      )
+      setPendingItems((prev) => [...prev, ...newItems])
+      setRecipePickerOpen(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("unexpectedError"))
+    } finally {
+      setAddingFromRecipes(false)
+    }
+  }
+
   function savePendingItem(id: number, data: ItemData) {
     setPendingItems((prev) =>
       prev.map((item) =>
@@ -185,6 +214,7 @@ export function ShoppingListNew() {
         name: listName.trim() || t("defaultListName", { date: new Date().toLocaleDateString("sv-SE") }),
         label: label.trim() || undefined,
         items,
+        groupedByCategories: grouped || undefined,
       }, spaceId)
       router.push(spaceId ? `/shopping-list?spaceId=${spaceId}` : "/shopping-list")
     } catch (e) {
@@ -196,6 +226,27 @@ export function ShoppingListNew() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <PageHeader title={t("newListHeading")} subtitle={t("newListSubtitle")} />
+
+      <div className="mb-4">
+        <Button
+          variant="outline"
+          onClick={() => setRecipePickerOpen(true)}
+        >
+          <BookOpen />
+          {t("fromRecipesButton")}
+        </Button>
+      </div>
+
+      <RecipePickerDialog
+        open={recipePickerOpen}
+        onOpenChange={setRecipePickerOpen}
+        onAdd={handleRecipePickerAdd}
+        adding={addingFromRecipes}
+        title={t("recipePickerTitle")}
+        description={t("recipePickerDescription")}
+        confirmLabel={t("recipePickerConfirm")}
+        confirmingLabel={t("recipePickerAdding")}
+      />
 
       <Card>
         <CardHeader>
@@ -272,46 +323,86 @@ export function ShoppingListNew() {
           </form>
 
           {pendingItems.length > 0 && (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              modifiers={[restrictToVerticalAxis]}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={pendingItems.map((_, i) => i)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-2">
-                  {pendingItems.map((item, index) => (
-                    <SortableItem
-                      key={item.id}
-                      item={{
-                        name: item.name,
-                        badge: formatPendingQty(item),
-                        noteBadge: formatPendingCategory(item),
-                        note: item.note,
-                        checked: false,
-                        rawQuantity: item.quantity ?? 0,
-                        rawUnit: item.unit ?? "pcs",
-                        rawCategoryId: item.categoryId ?? undefined,
-                      }}
-                      index={index}
-                      sortable
-                      editing={editingItemId === item.id}
-                      onStartEdit={() => setEditingItemId(item.id)}
-                      onSaveEdit={(data) => savePendingItem(item.id, data)}
-                      onCancelEdit={() => setEditingItemId(null)}
-                      onDeleteItem={() => removePendingItem(item.id)}
-                      unitOptions={unitOptions}
-                      categoryOptions={categoryOptionsList.length > 0 ? categoryOptionsList : undefined}
-                      categoryPlaceholder={t("categoryPlaceholder")}
-                      notePlaceholder={t("notePlaceholder")}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div>
+              <div className="flex justify-end mb-2">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setGrouped((v) => !v)}
+                  title={t("groupByCategory")}
+                  className={cn(grouped && "text-primary bg-primary/10")}
+                >
+                  <Layers className="size-4" />
+                </Button>
+              </div>
+
+              {grouped ? (
+                <GroupedItems
+                  items={pendingItems.map((item) => ({
+                    name: item.name,
+                    badge: formatPendingQty(item),
+                    noteBadge: formatPendingCategory(item),
+                    note: item.note,
+                    checked: false,
+                    rawQuantity: item.quantity ?? 0,
+                    rawUnit: item.unit ?? "pcs",
+                    rawCategoryId: item.categoryId ?? undefined,
+                  }))}
+                  editingIndex={pendingItems.findIndex((i) => i.id === editingItemId)}
+                  setEditingIndex={(index) => setEditingItemId(index !== null ? pendingItems[index]?.id ?? null : null)}
+                  onToggleItem={() => {}}
+                  onEditItem={(index, data) => savePendingItem(pendingItems[index].id, data)}
+                  onDeleteItem={(index) => removePendingItem(pendingItems[index].id)}
+                  unitOptions={unitOptions}
+                  categoryOptions={categoryOptionsList.length > 0 ? categoryOptionsList : undefined}
+                  categoryPlaceholder={t("categoryPlaceholder")}
+                  notePlaceholder={t("notePlaceholder")}
+                  uncategorizedLabel={t("uncategorized")}
+                  sensors={sensors}
+                />
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={pendingItems.map((_, i) => i)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {pendingItems.map((item, index) => (
+                        <SortableItem
+                          key={item.id}
+                          item={{
+                            name: item.name,
+                            badge: formatPendingQty(item),
+                            noteBadge: formatPendingCategory(item),
+                            note: item.note,
+                            checked: false,
+                            rawQuantity: item.quantity ?? 0,
+                            rawUnit: item.unit ?? "pcs",
+                            rawCategoryId: item.categoryId ?? undefined,
+                          }}
+                          index={index}
+                          sortable
+                          editing={editingItemId === item.id}
+                          onStartEdit={() => setEditingItemId(item.id)}
+                          onSaveEdit={(data) => savePendingItem(item.id, data)}
+                          onCancelEdit={() => setEditingItemId(null)}
+                          onDeleteItem={() => removePendingItem(item.id)}
+                          unitOptions={unitOptions}
+                          categoryOptions={categoryOptionsList.length > 0 ? categoryOptionsList : undefined}
+                          categoryPlaceholder={t("categoryPlaceholder")}
+                          notePlaceholder={t("notePlaceholder")}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
           )}
 
           {error && (

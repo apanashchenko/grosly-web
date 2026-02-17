@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Check,
   ClipboardList,
+  Copy,
   Loader2,
   Pencil,
   Plus,
@@ -62,6 +63,7 @@ import {
   getSavedRecipe,
   createShoppingList,
   deleteSavedRecipe,
+  duplicateRecipes,
   getCategories,
   getMealPlan,
   updateMealPlan,
@@ -78,7 +80,7 @@ import {
   type SavedRecipeResponse,
   type UpdateRecipeIngredientRequest,
 } from "@/lib/types"
-import { NONE_CATEGORY } from "@/lib/constants"
+import { NONE_CATEGORY, SOURCE_STYLES } from "@/lib/constants"
 import { useCategoryLocalization } from "@/hooks/use-category-localization"
 import { useCategories } from "@/hooks/use-categories"
 
@@ -90,15 +92,6 @@ function formatDate(iso: string, locale: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso))
-}
-
-const SOURCE_STYLES: Record<string, string> = {
-  PARSED: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
-  PARSED_IMAGE: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
-  GENERATED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
-  SUGGESTED: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
-  MANUAL: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
-  MEAL_PLAN: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
 }
 
 interface Props {
@@ -144,6 +137,12 @@ export function SavedRecipeDetail({ recipeId }: Props) {
   const [deletingIngId, setDeletingIngId] = useState<string | null>(null)
   const [addingIngredient, setAddingIngredient] = useState(false)
   const [addingIngLoading, setAddingIngLoading] = useState(false)
+
+  const [duplicating, setDuplicating] = useState(false)
+
+  // Linked meal plan warning state
+  const [linkedWarningOpen, setLinkedWarningOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
 
   const fetchRecipe = useCallback(async () => {
     setLoading(true)
@@ -198,6 +197,28 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     icon: c.icon,
   }))
 
+  // --- Linked warning helper ---
+
+  function withLinkedWarning(action: () => void) {
+    if (recipe && recipe.mealPlans.length > 0) {
+      setPendingAction(() => action)
+      setLinkedWarningOpen(true)
+    } else {
+      action()
+    }
+  }
+
+  function handleLinkedWarningConfirm() {
+    setLinkedWarningOpen(false)
+    pendingAction?.()
+    setPendingAction(null)
+  }
+
+  function handleLinkedWarningCancel() {
+    setLinkedWarningOpen(false)
+    setPendingAction(null)
+  }
+
   // --- Ingredient editing handlers ---
 
   useEffect(() => {
@@ -222,7 +243,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     setIngNote(ing.note ?? "")
   }
 
-  async function handleSaveIngredient() {
+  async function doSaveIngredient() {
     if (!recipe || !editingIngId) return
     const existing = recipe.ingredients.find((i) => i.id === editingIngId)
     if (!existing) return
@@ -258,7 +279,11 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
-  async function handleDeleteIngredient(ingredientId: string) {
+  function handleSaveIngredient() {
+    withLinkedWarning(doSaveIngredient)
+  }
+
+  async function doDeleteIngredient(ingredientId: string) {
     if (!recipe) return
     setDeletingIngId(ingredientId)
     try {
@@ -274,12 +299,16 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
+  function handleDeleteIngredient(ingredientId: string) {
+    withLinkedWarning(() => doDeleteIngredient(ingredientId))
+  }
+
   function startAddIngredient() {
     resetIngForm()
     setAddingIngredient(true)
   }
 
-  async function handleAddIngredient() {
+  async function doAddIngredient() {
     if (!recipe) return
     const trimmedName = ingName.trim()
     if (!trimmedName) return
@@ -305,6 +334,10 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
+  function handleAddIngredient() {
+    withLinkedWarning(doAddIngredient)
+  }
+
   // --- Recipe editing handlers ---
 
   function startEditTitle() {
@@ -319,7 +352,7 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     setEditingText(true)
   }
 
-  async function handleSaveTitle() {
+  async function doSaveTitle() {
     if (!recipe) return
     const trimmed = editTitle.trim()
     if (!trimmed || trimmed === recipe.title) {
@@ -339,7 +372,11 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
-  async function handleSaveText() {
+  function handleSaveTitle() {
+    withLinkedWarning(doSaveTitle)
+  }
+
+  async function doSaveText() {
     if (!recipe) return
     const trimmed = editText.trim()
     if (!trimmed || trimmed === recipe.text) {
@@ -357,6 +394,10 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleSaveText() {
+    withLinkedWarning(doSaveText)
   }
 
   // --- Create shopping list from ingredients ---
@@ -453,6 +494,21 @@ export function SavedRecipeDetail({ recipeId }: Props) {
     }
   }
 
+  async function handleDuplicate() {
+    if (!recipe) return
+    setDuplicating(true)
+    try {
+      const [copy] = await duplicateRecipes([recipeId])
+      toast.success(t("duplicateSuccess"))
+      router.push(`/recipes/${copy.id}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("unexpectedError")
+      toast.error(Array.isArray(msg) ? msg[0] : msg)
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
   async function handleDelete() {
     if (!recipe) return
     try {
@@ -495,6 +551,26 @@ export function SavedRecipeDetail({ recipeId }: Props) {
             excludePlanIds={recipe.mealPlans.map((p) => p.id)}
             onAdded={fetchRecipe}
           />
+
+          {/* Linked meal plan warning dialog */}
+          <AlertDialog open={linkedWarningOpen} onOpenChange={(open) => { if (!open) handleLinkedWarningCancel() }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("linkedWarningTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("linkedWarningDescription", { count: recipe.mealPlans.length })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={handleLinkedWarningCancel}>
+                  {t("linkedWarningCancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleLinkedWarningConfirm}>
+                  {t("linkedWarningConfirm")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <div className="grid items-start gap-6 lg:grid-cols-2">
             <div className="space-y-6">
@@ -930,6 +1006,19 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                   <ClipboardList className="size-4" />
                   {tPlans("addToMealPlan")}
                 </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDuplicate}
+                  disabled={duplicating}
+                >
+                  {duplicating ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  {t("duplicateRecipe")}
+                </Button>
                 {recipe.ingredients.length > 0 && (
                   <>
                     <Button
@@ -998,7 +1087,9 @@ export function SavedRecipeDetail({ recipeId }: Props) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {t("deleteDescription")}
+                    {recipe.mealPlans.length > 0
+                      ? t("deleteLinkedDescription", { count: recipe.mealPlans.length })
+                      : t("deleteDescription")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
